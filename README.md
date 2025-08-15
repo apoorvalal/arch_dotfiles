@@ -1,4 +1,4 @@
-## dotfiles for arch system running omarchy
+## dotfiles for arch system running [omarchy](https://omarchy.org/)
 
 On a new system, set up git ssh keys, and then git clone into `~/dotfiles`.
 Then symlink into the right places; e.g 
