@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+import os, sys, requests, re
+from pathlib import Path
+from requests_html import HTMLSession
+
+#%%
+def scrape_links(url, pat = ".pdf"):
+    """
+    Scrapes all links on page, optionally accepts filename pattern
+    """
+    session = HTMLSession()
+    r = session.get(url)
+    parsed_html = r.html
+    links = [e for e in parsed_html.absolute_links]
+    if pat:
+        links = [e for e in links if re.search(pat, e)]
+    return links
+
+if __name__ == '__main__':
+    print('script call format: /linkpull <url>')
+    link = sys.argv[1]
+    linklist = scrape_links(link)
+    with open("links.txt", 'w') as f:
+      for l in linklist:
+        f.write(str(l) + "\n")

@@ -1,0 +1,12 @@
+#!/bin/bash
+if [ "$#" -ne 3 ]; then
+  echo "Usage: $0 <env_name> <python_version> <display_name>"
+  exit 1
+fi
+# Assign arguments to variables
+ENV_NAME=$1; PYTHON_VERSION=$2; DISPLAY_NAME=$3
+# Create the environment with the specified Python version and install ipykernel
+mamba create -yq --name "$ENV_NAME" python="$PYTHON_VERSION" ipykernel
+# # Install the kernel for Jupyter
+mamba run -n "$ENV_NAME" python -m ipykernel install --user --name "$ENV_NAME" --display-name "$DISPLAY_NAME"
+echo "Environment '$ENV_NAME' with Python $PYTHON_VERSION created and Jupyter kernel '$DISPLAY_NAME' installed."

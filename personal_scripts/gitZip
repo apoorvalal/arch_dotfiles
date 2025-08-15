@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+import sys, requests
+
+def zip_get(n, root = "master"):
+    zipath = f"{n}/archive/refs/heads/{root}.zip"
+    print(f"Downloading from {zipath}")
+    # download 
+    r = requests.get(zipath)
+    # write 
+    with open("repo.zip",'wb') as f:
+        f.write(r.content)
+
+# %%
+if __name__ == '__main__':
+    argu = sys.argv
+    if (len(argu) == 2):
+        o = zip_get(argu[1])
+    else:
+        o = zip_get(argu[1], argu[2])

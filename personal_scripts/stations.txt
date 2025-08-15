@@ -1,0 +1,18 @@
+{
+  "KEXP"         : "https://kexp-mp3-128.streamguys1.com/kexp128.mp3",
+  "KCRW"         : "http://media.kcrw.com/pls/kcrwmusic.pls",
+  "KNKX"         : "http://live.wostreaming.net/direct/ppm-knkxfmmp3-ibc1",
+  "KNKJ"         : "http://live.wostreaming.net/direct/ppm-jazz24mp3-ibc1",
+  "KUOW"         : "http://playerservices.streamtheworld.com/pls/KUOWFM_HIGH_MP3.pls",
+  "KALX"         : "http://stream.kalx.berkeley.edu:8000/kalx-128.mp3",
+  "KAOS"         : "http://205.134.192.90:8930/",
+  "SOMACliq"     : "https://somafm.com/nossl/cliqhop256.pls",
+  "SOMAGroove"   : "https://somafm.com/nossl/groovesalad256.pls",
+  "SOMASpace"    : "https://somafm.com/nossl/deepspaceone130.pls",
+  "SOMAGoa"      : "https://somafm.com/nossl/suburbsofgoa.pls",
+  "SOMAsf"       : "https://somafm.com/nossl/sf1033.pls",
+  "BLUE"         : "http://streams.echoesofbluemars.org:8000/bluemars.m3u",
+  "CRYO"         : "http://streams.echoesofbluemars.org:8000/cryosleep.m3u",
+  "VOWI"         : "http://streams.echoesofbluemars.org:8000/voicesfromwithin.m3u",
+  "WZBC"         : "http://amber.streamguys.com:4860/"
+}

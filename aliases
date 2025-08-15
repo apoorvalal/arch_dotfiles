@@ -1,0 +1,279 @@
+alias rscr="zed ~/tmp/r_scratch.R"
+alias pscr="zed ~/tmp/py_scratch.py"
+
+alias sshconf="vim ~/.ssh/config"
+
+# utils
+extch(){
+    mv $1 ${1%%.*}.$2
+}
+
+pref(){
+    mv $1 $2_$1
+}
+
+prefd(){
+    for f in *; do mv "$f" "${1}_${f// /_}"; done
+}
+
+chop(){
+  mv $1 $(echo $1 | cut -c$2-)
+}
+
+prefd(){
+    for f in *; do mv "$f" "${1}_${f// /_}"; done
+}
+
+chopd(){
+    for f in *; do mv "$f" "$(echo $f | cut -c$1-)"; done
+}
+
+
+bak() {
+  cp "$1"{,.bak};
+}
+mcd() {
+  mkdir -p $1 ;
+  cd $1
+}
+
+# Handy Extract Program.
+function extract() {
+          if [ -f $1 ] ; then
+            mkdir ${1%%.*}
+             case $1 in
+             *.tar.bz2)   tar xvjf $1 -C ${1%%.*}   ;;
+             *.tar.gz)    tar xvzf $1 -C ${1%%.*}   ;;
+             *.tar.xz)    tar xvzf $1 -C ${1%%.*}   ;;
+             *.tbz2)      tar xvjf $1 -C ${1%%.*}   ;;
+             *.tgz)       tar xvzf $1 -C ${1%%.*}   ;;
+             *.zip)       unzip  $1   -d ${1%%.*}   ;;
+             *.bz2)       bunzip2 $1      ;;
+             *.rar)       unrar x $1      ;;
+             *.gz)        gunzip $1       ;;
+             *.tar)       tar xvf $1      ;;
+             *.Z)         uncompress $1   ;;
+             *.7z)        7z x $1         ;;
+             *)           echo "'$1' cannot be extracted via extract()" ;;
+         esac
+     else
+         echo "'$1' is not a valid file"
+     fi
+}
+
+# move file into separate folder - useful for big zip files
+indfld(){
+    mkdir ${1%%.*}
+    mv $1  ${1%%.*}
+}
+
+unzip_d () {
+  zipfile="$1"
+  zipdir=${1%.zip}
+  unzip -d "$zipdir" "$zipfile"
+}
+
+unzip_dirs() {
+   for i in `ls *.zip`; #do echo "$i" "${i%.zip}"; done
+       do unzip_d "$i";
+   done
+}
+
+curler(){
+    xargs -n 1 curl -O < $1
+}
+
+apply_all(){
+    cat $1 | xargs -N 1 $2
+}
+
+# xdg-open alias to suppress warnings
+alias o='xdg-open 2>/dev/null'
+
+fzo(){
+  o $(fzf)
+}
+
+alias rtar="R CMD INSTALL"
+
+# number of lines in csv
+csv_nlines(){
+  cat $1 | wc -l
+}
+
+# full path copy
+pcopy(){
+  readlink -f $1 | xclip
+}
+
+
+# delete all .git folders
+gpurge() {
+    ( find . -type d -name ".git" && find . -name ".gitignore" && find . -name ".gitmodules" ) | xargs rm -rf
+}
+
+# replace all spaces in filenames with underscore
+nspaces() {
+    for f in *\ *; do mv "$f" "${f// /_}"; done
+}
+alias renSpc="rename 's/%20/ /g' *"
+alias nperiods="rename 's/\.(?=[^.]*\.)//g' *"
+
+# remap for jupyter
+cswitch() {
+    source activate $1
+}
+alias csw='cswitch'
+
+cdeact() {
+    conda deactivate $1
+}
+
+condainstall(){
+  mamba env create -f $1
+}
+
+alias cdea='cdeact'
+alias jpnb='cd ~ && jupyter notebook'
+alias jplb='cd ~ && jupyter lab'
+alias jpsv='cd ~ && jupyter lab --no-browser'
+
+
+# pandoc, pweave, and sweave hacks
+# pandoc md to pdf
+pan_pdf() {
+    pandoc -o ${1%%.*}.pdf $1
+}
+
+pan_html(){
+    pandoc -s $1 -o ${1%%.*}.html --toc
+}
+
+
+pan_conv(){
+    pandoc -s $1 -o ${1%%.*}.$2
+}
+
+pan_mdtex(){
+    pandoc +RTS -K512m -RTS -s $1 --to latex --from markdown+autolink_bare_uris+ascii_identifiers+tex_math_single_backslash --output ${1%%.*}.tex --template=lal-mdpdf --pdf-engine xelatex --biblatex --variable graphics=yes
+}
+
+################################
+## Quarto render
+################################
+#
+
+qW(){
+  quarto render $1
+}
+
+# ipynb to scripts
+alias nbscr='for f in **/*.ipynb; do jupytext --to py:percent $f; done'
+alias nbscrr='for f in **/*.ipynb; do jupytext --to r:percent $f; done'
+alias nbweb='for f in **/*.ipynb; do jupyter nbconvert --to html_toc $f; done'
+alias nbpdf='for f in **/*.ipynb; do jupyter nbconvert --to PDFviaHTML $f; done'
+
+alias nbwebrun='for f in **/*.ipynb; do jupyter nbconvert --to html_toc --execute $f; done'
+alias nbpdfrun='for f in **/*.ipynb; do jupyter nbconvert --to PDFviaHTML --execute $f; done'
+
+
+# ipynb to scripts
+alias nbscr1='jupytext --to py:percent $1'
+alias rmdnb1='jupytext --to notebook $1'
+alias nbweb1='jupyter nbconvert --to html_toc $1'
+alias nbpdf1='jupyter-nbconvert --to PDFviaHTML $1'
+alias sweave="R CMD Sweave --pdf $1"
+
+################################
+
+# convenience aliases for editing configs
+alias zr='source ~/.zshrc'
+alias br='source ~/.bashrc'
+
+alias vt='vim ~/.tmux.conf'
+alias vz='vim ~/.zshrc'
+alias vv='vim ~/.vimrc'
+alias vnv="nvim ~/.config/nvim/init.lua"
+alias vs='vim ~/.aliases'
+alias vr="vim ~/.Rprofile"
+alias vss="vim ~/.config/regolith3/sway/config.d/regolithsway"
+
+##########
+# Defaults
+##########
+# Universal Shell Aliases, should work with both Bash and ZSH.
+alias mkdir='mkdir -p'
+alias chown='chown -Rv'
+alias chmod='chmod -Rv'
+alias grep='grep --color=always -i -n'
+alias diff='colordiff'
+alias tar2='tar -xzvf'
+alias rsync='rsync --verbose  --progress --stats --compress --recursive --times --perms --links exclude "*bak" --exclude "*~*"'
+alias psaux='ps aux'
+alias psl='psaux|more'
+alias psg='psaux|grep'
+alias more='less'
+alias tracert='mtr'
+alias traceroute='mtr'
+alias logout='sudo pkill -u $USER'
+alias log-out='sudo pkill -u $USER'
+
+alias yi='yi --as=vim'
+
+#LS_COLORS=$LS_COLORS:'di=0;35:' ; export LS_COLORS
+alias le="exa -l --group-directories-first --colour-scale -abgh"
+alias l='exa -F --sort=extension --group-directories-first --colour-scale -abgh'
+alias ll='exa -lh -l -b --group-directories-first --colour-scale -abgh'
+alias lll='exa -alF --group-directories-first --color=always|more'
+alias lsdot='exa -a | egrep '^\.' --color=always|more'
+alias lla='exa -alF --group-directories-first --color=always'
+alias lld='exa -alF -d --color=always */'
+
+############################################################
+# GIT STUFF
+############################################################
+#
+commit_composer(){
+    git commit -am \"$1\"
+}
+alias gcam="commit_composer"
+
+alias ga='git add'
+alias gaa='git add -A'
+alias gau='git add -u'
+alias gcaa='git commit --amend --no-edit'
+alias gpom='git push --all origin'
+alias gp='git push'
+alias gcau="git commit -am 'update'"
+alias gcm='git commit -m'
+alias gcmu="git commit -m 'update'"
+alias gcn='git clone'
+alias gcnn='git clone --depth 1'
+alias gf='git fetch --all'
+alias gfum='git fetch --all'
+alias gpa='git pull --all'
+
+
+alias gpau="git push --set-upstream origin master"
+alias grau='git remote add upstream'
+alias gref='git rm -r --cached . && git add .' # refresh after changes to gitignore
+alias grv='git remote -v'
+alias gsps='git stash && git pull origin master && git stash pop'
+alias gst='git status'
+alias grsh="git remote show origin"
+alias greset='git reset --hard HEAD'
+alias greset2='git reset --hard HEAD~1'
+alias gres='git reset --hard'
+alias gitgud="git restore . && git clean -f"
+
+# branches
+alias gbra='git checkout -b'
+alias gbrad='git branch -d'
+
+# aliases for Tmux
+alias tmux='tmux -2'
+alias tma='tmux attach-session' # attach last session
+alias ta='tmux attach -t'
+alias tnew='tmux new -s'
+alias tls='tmux ls'
+alias tkill='tmux kill-session -t'

@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+import sys
+import subprocess
+
+def svn_clone(git_name, root = "master"):
+    svn_name = git_name.replace(f"tree/{root}", "trunk")
+    cmd = f"svn export {svn_name}"
+    print(f"running {cmd}")
+    out = subprocess.getoutput(cmd)
+    return out
+# %%
+if __name__ == '__main__':
+    argu = sys.argv
+    if (len(argu) == 2):
+        o = svn_clone(argu[1])
+    else:
+        o = svn_clone(argu[1], argu[2])
