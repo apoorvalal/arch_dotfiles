@@ -5,6 +5,9 @@ source ~/.local/share/omarchy/default/bash/rc
 source ~/.aliases
 source ~/.pathrc
 
+# bookmark script
+source ~/dotfiles/bashmarks.sh
+
 # Add your own exports, aliases, and functions here.
 #
 # Make an alias for invoking commands you use constantly
@@ -30,9 +33,6 @@ fi
 export FZF_DEFAULT_OPTS='--height 50% --layout=reverse --border'
 
 
-
-export NVM_DIR="/home/alal/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm

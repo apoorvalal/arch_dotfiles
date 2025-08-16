@@ -195,8 +195,10 @@ alias vz='vim ~/.zshrc'
 alias vv='vim ~/.vimrc'
 alias vnv="nvim ~/.config/nvim/init.lua"
 alias vs='vim ~/.aliases'
+alias vb='vim ~/.bashrc'
 alias vr="vim ~/.Rprofile"
-alias vss="vim ~/.config/regolith3/sway/config.d/regolithsway"
+
+alias vo='vim ~/dotfiles/hypr/bindings.conf'
 
 ##########
 # Defaults
