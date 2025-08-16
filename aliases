@@ -1,6 +1,8 @@
 alias rscr="zed ~/tmp/r_scratch.R"
 alias pscr="zed ~/tmp/py_scratch.py"
 
+alias vsc="code -n ."
+
 alias sshconf="vim ~/.ssh/config"
 
 # utils
@@ -234,9 +236,9 @@ alias lld='exa -alF -d --color=always */'
 ############################################################
 # GIT STUFF
 ############################################################
-#
+
 commit_composer(){
-    git commit -am \"$1\"
+    git commit -am $*
 }
 alias gcam="commit_composer"
 
