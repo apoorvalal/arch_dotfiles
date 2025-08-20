@@ -1,0 +1,42 @@
+[
+	{"id": "side-bar-files-open-with",
+		"children":
+		[
+
+			//application 1
+			{
+				"caption": "Okular",
+				"id": "side-bar-files-open-with-photoshop",
+
+				"command": "side_bar_files_open_with",
+				"args": {
+									"paths": [],
+									"application": "okular", // OSX
+									"extensions":"pdf",  //any file with these extensions
+									"args":[]
+								},
+				"open_automatically" : false // will close the view/tab and launch the application
+			},
+
+			//separator
+			{"caption":"-"},
+
+			//application n
+			{
+				"caption": "Chrome",
+				"id": "side-bar-files-open-with-chrome",
+
+				"command": "side_bar_files_open_with",
+				"args": {
+									"paths": [],
+									"application": "chrome",
+									"extensions":".*", //any file with extension
+									"args":[]
+						},
+				"open_automatically" : false // will close the view/tab and launch the application
+			},
+
+			{"caption":"-"}
+		]
+	}
+]

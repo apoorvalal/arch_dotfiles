@@ -1,0 +1,23 @@
+{
+	"prog": "tmux",
+	"r":
+	{
+		"bracketed_paste_mode": true,
+		"prog": "terminus",
+	},
+	"rmd":
+	{
+		"bracketed_paste_mode": false,
+		"prog": "terminus",
+	},
+	"python":
+	{
+		"bracketed_paste_mode": true,
+		"prog": "tmux",
+	},
+	"julia":
+	{
+		"bracketed_paste_mode": true,
+		"prog": "terminus",
+	},
+}

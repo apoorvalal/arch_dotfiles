@@ -1,0 +1,5 @@
+{
+    "shell_cmd": "pandoc -o \"$file_base_name.pdf\" \"$file\" --citeproc --template=lal-mdpdf --pdf-engine=xelatex",
+    "selector": "text.html.markdown",
+    "path": "/usr/texbin:$PATH"
+}

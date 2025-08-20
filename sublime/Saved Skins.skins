@@ -1,0 +1,12 @@
+{
+	"mkbright":
+	{
+		"Preferences":
+		{
+			"color_scheme": "Packages/Colorsublime - Themes/cache/Colorsublime-Themes-master/themes/monokai_fresh.tmTheme",
+			"font_face": "Iosevka",
+			"font_size": 13,
+			"theme": "Adaptive.sublime-theme"
+		}
+	}
+}

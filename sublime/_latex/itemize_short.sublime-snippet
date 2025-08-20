@@ -1,0 +1,10 @@
+<snippet>
+    <content><![CDATA[
+\bi
+    \item ${1:first}
+\ei
+]]></content>
+    <tabTrigger>biei</tabTrigger>
+    <scope>text.tex.latex,text.html.markdown.rmarkdown </scope>
+
+</snippet>

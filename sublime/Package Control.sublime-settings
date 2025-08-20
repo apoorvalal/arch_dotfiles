@@ -1,0 +1,30 @@
+{
+	"bootstrapped": true,
+	"in_process_packages":
+	[
+		"LSP",
+	],
+	"installed_packages":
+	[
+		"BracketHighlighter",
+		"Colorsublime",
+		"Git",
+		"LaTeX Word Count",
+		"LaTeXTools",
+		"LSP",
+		"Markdown Extended",
+		"MarkdownEditing",
+		"Material Theme",
+		"Origami",
+		"Package Control",
+		"PackageResourceViewer",
+		"Path Tools",
+		"Quarto",
+		"SendCode",
+		"SideBarEnhancements",
+		"Terminus",
+		"Text Pastry",
+		"UnicodeMath",
+		"Wrap Plus",
+	],
+}

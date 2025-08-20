@@ -1,0 +1,4 @@
+{
+       "enable_mathjax": true,
+       "enabled_parsers": ["markdown"],
+}

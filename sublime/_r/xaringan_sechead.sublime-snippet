@@ -1,0 +1,12 @@
+<snippet>
+    <content><![CDATA[
+class: inverse, center, middle
+name: ${1:title}
+# ${1:title}
+<html><div style='float:left'></div><hr color='#EB811B' size=1px width=796px></html>
+]]></content>
+    <!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+    <tabTrigger>XariSect</tabTrigger>
+    <!-- Optional: Set a scope to limit where the snippet will trigger -->
+    <scope>text.html.markdown.rmarkdown </scope>
+</snippet>

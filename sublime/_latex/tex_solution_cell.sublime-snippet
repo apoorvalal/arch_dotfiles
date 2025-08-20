@@ -1,0 +1,11 @@
+<snippet>
+  <content><![CDATA[
+\ifsol{\color{red}
+  ${1:first}
+}\fi
+    ]]></content>
+  <!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+  <tabTrigger>PsetSol</tabTrigger>
+  <!-- Optional: Set a scope to limit where the snippet will trigger -->
+  <scope>text.tex.latex</scope>
+</snippet>

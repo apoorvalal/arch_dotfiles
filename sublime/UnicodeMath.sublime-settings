@@ -1,0 +1,5 @@
+{
+    "convert_on_space": false,
+    "ignore_syntax": ["latex","markdown extended","markdown"],
+}
+

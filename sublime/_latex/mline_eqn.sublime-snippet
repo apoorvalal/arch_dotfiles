@@ -1,0 +1,10 @@
+<snippet>
+	<content><![CDATA[
+\begin{align*}
+${1} & = ${2} \\\\
+${3} & = ${4} \\\\
+\end{align*}
+]]></content>
+	<tabTrigger>Eqn</tabTrigger>
+	<scope>text.tex.latex, text.html.markdown.rmarkdown </scope>
+</snippet>

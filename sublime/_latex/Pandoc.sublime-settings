@@ -1,0 +1,43 @@
+  // {
+  //   "user": {
+  //     "transformations": {
+  //       "HTML 5": {
+  //         "scope": {
+  //           "text.html.markdown": "markdown"
+  //         },
+  //         "syntax_file": "Packages/HTML/HTML.tmLanguage",
+  //         "pandoc-arguments": [
+  //           "-t","html",
+  //           "--toc",
+  //           "--filter", "pandoc-citeproc",
+  //           "--standalone",
+  //           "--to=html5",
+  //           "--mathjax",
+  //           "--no-highlight",
+  //         ]
+  //       },
+  //       "PDF": {
+  //         "scope": {
+  //           "text.html": "html",
+  //           "text.html.markdown": "markdown"
+  //         },
+  //         "pandoc-arguments": [
+  //           "-t", "pdf",
+  //           "--latex-engine=pdflatex",
+  //           "--filter", "pandoc-citeproc"
+  //         ]
+  //       },
+  //       "Microsoft Word": {
+  //         "scope": {
+  //           "text.html": "html",
+  //           "text.html.markdown": "markdown"
+  //         },
+  //         "pandoc-arguments": [
+  //           "-t", "docx",
+  //           "--filter", "pandoc-citeproc"
+  //         ]
+  //       },
+  //     },
+  //     "pandoc-format-file": ["docx", "epub", "pdf", "odt", "html"]
+  //   }
+  // }

@@ -1,0 +1,16 @@
+<snippet>
+	<content><![CDATA[
+####################################################
+rm(list = ls())
+library(LalRUtils)
+libreq(data.table, magrittr, tidyverse, janitor, stargazer2, knitr)
+theme_set(lal_plot_theme_d())
+set.seed(42)
+options(repr.plot.width = 15, repr.plot.height=12)
+####################################################
+]]></content>
+	<!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+	<tabTrigger>RHeader</tabTrigger>
+	<!-- Optional: Set a scope to limit where the snippet will trigger -->
+	<scope>source.r,text.html.markdown.rmarkdown</scope>
+</snippet>

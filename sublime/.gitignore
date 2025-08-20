@@ -1,0 +1,42 @@
+###################
+# directories     #
+###################
+.SublimeREPLHistory/
+SublimeLinter/
+Package Control.cache/
+Package Control.ca-certs/
+
+###################
+# extensions      #
+###################
+[Tt]humbs.db
+*.DS_Store
+*.com
+*.class
+*.dll
+*.exe
+*.pdb
+*.dll.config
+*.cache
+*.suo
+*.pdf
+###########################
+# Package Control stuff   #
+###########################
+Package Control.last-run
+Package Control.ca-list
+Package Control.ca-bundle
+Package Control.system-ca-bundle
+Package Control.merged-ca-bundle
+Package Control.user-ca-bundle
+oscrypto-ca-bundle.crt
+
+###########################
+#        Files            #
+###########################
+Gist.sublime-settings
+SBSCompare.tmTheme
+TextPastryHistory.sublime-settings
+SublimeREPL.sublime-settings
+LaTexTools.sublime-settings
+SBSCompare*

@@ -1,0 +1,9 @@
+<snippet>
+  <content><![CDATA[
+# %% [markdown]
+# ${1:text}
+# %%
+]]></content>
+  <tabTrigger>mdjp</tabTrigger>
+  <scope>source.julia,source.r,source.r</scope>
+</snippet>

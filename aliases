@@ -5,6 +5,13 @@ alias vsc="code -n ."
 
 alias sshconf="vim ~/.ssh/config"
 
+# quartz
+alias qp="npx quartz build --serve"
+alias qd="npx quartz sync"
+
+# uv venv
+alias vacti="source .venv/bin/activate"
+
 # utils
 extch(){
     mv $1 ${1%%.*}.$2
@@ -238,7 +245,7 @@ alias lld='exa -alF -d --color=always */'
 ############################################################
 
 commit_composer(){
-    git commit -am $*
+    git commit -am '$*'
 }
 alias gcam="commit_composer"
 
