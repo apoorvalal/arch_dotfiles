@@ -85,3 +85,8 @@ n () {
 
 
 . "$HOME/.local/share/../bin/env"
+
+# ~/.bashrc
+
+eval "$(starship init bash)"
+export PATH="/home/alal/.pixi/bin:$PATH"
