@@ -1,7 +1,17 @@
 alias rscr="zed ~/tmp/r_scratch.R"
 alias pscr="zed ~/tmp/py_scratch.py"
 
+alias vscode="code -n"
 alias vsc="code -n ."
+
+fFile(){
+  find . -iname $1
+}
+
+# search for text
+txtSearch(){
+    grep -rnw . -e $1
+}
 
 alias sshconf="vim ~/.ssh/config"
 
@@ -244,10 +254,9 @@ alias lld='exa -alF -d --color=always */'
 # GIT STUFF
 ############################################################
 
-commit_composer(){
-    git commit -am '$*'
+squasher(){
+  git reset --soft HEAD~$1
 }
-alias gcam="commit_composer"
 
 alias ga='git add'
 alias gaa='git add -A'
@@ -256,7 +265,7 @@ alias gcaa='git commit --amend --no-edit'
 alias gpom='git push --all origin'
 alias gp='git push'
 alias gcau="git commit -am 'update'"
-alias gcm='git commit -m'
+alias gcm='git commit -am'
 alias gcmu="git commit -m 'update'"
 alias gcn='git clone'
 alias gcnn='git clone --depth 1'
