@@ -1,6 +1,8 @@
 alias rscr="zed ~/tmp/r_scratch.R"
 alias pscr="zed ~/tmp/py_scratch.py"
 
+alias zeditor="WAYLAND_DISPLAY= zeditor"
+
 alias vscode="code -n"
 alias vsc="code -n ."
 
@@ -273,6 +275,7 @@ alias gf='git fetch --all'
 alias gfum='git fetch --all'
 alias gpa='git pull --all'
 
+alias gc="git add -A && git commit -am 'update'"
 
 alias gpau="git push --set-upstream origin master"
 alias grau='git remote add upstream'
