@@ -1,6 +1,8 @@
 alias rscr="zed ~/tmp/r_scratch.R"
 alias pscr="zed ~/tmp/py_scratch.py"
 
+alias scsv="cxxmatrix -s 'rain-forever'"
+
 alias zeditor="WAYLAND_DISPLAY= zeditor"
 
 alias vscode="code -n"
