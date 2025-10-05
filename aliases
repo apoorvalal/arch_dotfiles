@@ -1,9 +1,15 @@
 alias rscr="zed ~/tmp/r_scratch.R"
 alias pscr="zed ~/tmp/py_scratch.py"
 
+alias fig="figlet -f banner3"
+
 alias scsv="cxxmatrix -s 'rain-forever'"
 
 alias zeditor="WAYLAND_DISPLAY= zeditor"
+
+pdfsep(){
+    pdftk $1 cat $2 output sliced.pdf
+}
 
 alias vscode="code -n"
 alias vsc="code -n ."

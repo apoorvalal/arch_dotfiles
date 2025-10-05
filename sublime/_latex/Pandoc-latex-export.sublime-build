@@ -1,5 +1,5 @@
 {
-    "shell_cmd": "pandoc -o \"$file_base_name.pdf\" \"$file\" --citeproc --template=lal-mdpdf --pdf-engine=xelatex",
+    "shell_cmd": "pandoc -o \"$file_base_name.pdf\" \"$file\"",
     "selector": "text.html.markdown",
-    "path": "/usr/texbin:$PATH"
+    "path": "/home/alal/.local/bin:/usr/local/texlive/2025/bin/x86_64-linux:$PATH"
 }
