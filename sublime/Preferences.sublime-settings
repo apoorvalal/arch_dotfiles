@@ -86,7 +86,7 @@
 		"no_bold",
 		"no_italic"
 	],
-	"font_size": 11,
+	"font_size": 15,
 	"highlight_modified_tabs": true,
 	"ignored_packages":
 	[
@@ -123,7 +123,7 @@
 	"ui_wide_scrollbars": true,
 	"wide_caret": true,
 	"word_wrap": true,
-	"color_scheme": "Flexoki Dark.sublime-color-scheme",
+	"color_scheme": "Packages/Colorsublime - Themes/Brogrammer.tmTheme",
 	"index_files": true,
 	"auto_complete_triggers":
 	[
