@@ -199,17 +199,17 @@ qW(){
 # ipynb to scripts
 alias nbscr='for f in **/*.ipynb; do jupytext --to py:percent $f; done'
 alias nbscrr='for f in **/*.ipynb; do jupytext --to r:percent $f; done'
-alias nbweb='for f in **/*.ipynb; do jupyter nbconvert --to html_toc $f; done'
+alias nbweb='for f in **/*.ipynb; do jupyter nbconvert --to html $f; done'
 alias nbpdf='for f in **/*.ipynb; do jupyter nbconvert --to PDFviaHTML $f; done'
 
-alias nbwebrun='for f in **/*.ipynb; do jupyter nbconvert --to html_toc --execute $f; done'
+alias nbwebrun='for f in **/*.ipynb; do jupyter nbconvert --to html --execute $f; done'
 alias nbpdfrun='for f in **/*.ipynb; do jupyter nbconvert --to PDFviaHTML --execute $f; done'
 
 
 # ipynb to scripts
 alias nbscr1='jupytext --to py:percent $1'
 alias rmdnb1='jupytext --to notebook $1'
-alias nbweb1='jupyter nbconvert --to html_toc $1'
+alias nbweb1='jupyter nbconvert --to html $1'
 alias nbpdf1='jupyter-nbconvert --to PDFviaHTML $1'
 alias sweave="R CMD Sweave --pdf $1"
 
