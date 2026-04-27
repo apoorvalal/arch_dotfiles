@@ -1,0 +1,258 @@
+#!/bin/bash
+
+set -euo pipefail
+
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+PROFILE_DIR="$DOTFILES_DIR/autorice/profiles"
+STATE_DIR="$HOME/.local/state/autorice"
+HYPR_TOGGLE_DIR="$HOME/.local/state/omarchy/toggles/hypr"
+STATE_FILE="$STATE_DIR/current"
+
+export OMARCHY_PATH="${OMARCHY_PATH:-$HOME/.local/share/omarchy}"
+export PATH="$OMARCHY_PATH/bin:$PATH"
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  autorice apply <natural-language request|profile>
+  autorice detect
+  autorice status
+  autorice list
+  autorice waybar
+
+Examples:
+  autorice apply "reading papers for a while"
+  autorice apply development
+  autorice detect
+USAGE
+}
+
+notify() {
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -u low "autorice" "$1"
+  fi
+}
+
+json_escape() {
+  local value="${1:-}"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/ }"
+  printf '%s' "$value"
+}
+
+profile_exists() {
+  [[ -f $PROFILE_DIR/$1/profile.conf ]]
+}
+
+list_profiles() {
+  find "$PROFILE_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
+}
+
+classify() {
+  local input="${*,,}"
+
+  if profile_exists "$input"; then
+    printf '%s\n' "$input"
+    return
+  fi
+
+  case "$input" in
+    *game*|*gaming*|*steam*|*lutris*|*heroic*|*proton*|*gamescope*|*fps*|*gpu*)
+      printf 'gaming\n'
+      ;;
+    *read*|*reading*|*paper*|*pdf*|*book*|*article*|*zathura*|*typora*|*notes*)
+      printf 'reading\n'
+      ;;
+    *present*|*presentation*|*talk*|*demo*|*meeting*|*zoom*|*share*|*stream*)
+      printf 'presentation\n'
+      ;;
+    *focus*|*deep*|*write*|*writing*|*quiet*|*dnd*|*concentrat*)
+      printf 'focus\n'
+      ;;
+    *dev*|*develop*|*code*|*coding*|*terminal*|*editor*|*vim*|*nvim*|*sublime*|*vscode*|*python*|*rust*|*git*)
+      printf 'development\n'
+      ;;
+    *)
+      printf 'development\n'
+      ;;
+  esac
+}
+
+current_task_text() {
+  local text=""
+
+  if command -v hyprctl >/dev/null 2>&1; then
+    text="$(hyprctl activewindow 2>/dev/null | sed -n \
+      -e 's/^[[:space:]]*class:[[:space:]]*//p' \
+      -e 's/^[[:space:]]*initialClass:[[:space:]]*//p' \
+      -e 's/^[[:space:]]*title:[[:space:]]*//p' | paste -sd ' ' -)"
+  fi
+
+  if pgrep -a 'steam|gamescope|lutris|heroic' >/dev/null 2>&1; then
+    text="$text gaming steam gamescope"
+  fi
+
+  printf '%s\n' "${text:-development}"
+}
+
+set_dnd() {
+  local desired="$1"
+
+  command -v makoctl >/dev/null 2>&1 || return 0
+
+  if [[ $desired == "on" ]]; then
+    makoctl mode | grep -q '^do-not-disturb$' || makoctl mode -a do-not-disturb >/dev/null
+  elif [[ $desired == "off" ]]; then
+    makoctl mode | grep -q '^do-not-disturb$' && makoctl mode -r do-not-disturb >/dev/null
+  fi
+
+  pkill -RTMIN+10 waybar 2>/dev/null || true
+}
+
+set_idle() {
+  local desired="$1"
+
+  command -v hypridle >/dev/null 2>&1 || return 0
+
+  if [[ $desired == "on" ]]; then
+    if ! pgrep -x hypridle >/dev/null; then
+      uwsm-app -- hypridle >/dev/null 2>&1 &
+    fi
+  elif [[ $desired == "off" ]]; then
+    pkill -x hypridle 2>/dev/null || true
+  fi
+
+  pkill -RTMIN+9 waybar 2>/dev/null || true
+}
+
+set_power_profile() {
+  local profile="$1"
+
+  [[ -n $profile ]] || return 0
+  command -v powerprofilesctl >/dev/null 2>&1 || return 0
+
+  powerprofilesctl set "$profile" >/dev/null 2>&1 || true
+}
+
+apply_profile() {
+  local request="$*"
+  local profile profile_file theme power idle dnd description
+
+  profile="$(classify "$request")"
+  profile_file="$PROFILE_DIR/$profile/profile.conf"
+
+  if [[ ! -f $profile_file ]]; then
+    echo "Missing profile: $profile_file" >&2
+    exit 1
+  fi
+
+  # shellcheck source=/dev/null
+  source "$profile_file"
+
+  theme="${THEME:-}"
+  power="${POWER_PROFILE:-}"
+  idle="${IDLE:-keep}"
+  dnd="${DND:-keep}"
+  description="${DESCRIPTION:-$profile}"
+
+  mkdir -p "$STATE_DIR" "$HYPR_TOGGLE_DIR"
+
+  if [[ -n $theme ]]; then
+    omarchy-theme-set "$theme"
+  fi
+
+  if [[ -f $PROFILE_DIR/$profile/hyprland.conf ]]; then
+    cp "$PROFILE_DIR/$profile/hyprland.conf" "$HYPR_TOGGLE_DIR/autorice.conf"
+    hyprctl reload >/dev/null 2>&1 || true
+  fi
+
+  set_power_profile "$power"
+  set_idle "$idle"
+  set_dnd "$dnd"
+
+  {
+    printf 'PROFILE=%q\n' "$profile"
+    printf 'THEME=%q\n' "$theme"
+    printf 'REQUEST=%q\n' "$request"
+    printf 'DESCRIPTION=%q\n' "$description"
+    date '+APPLIED_AT=%Y-%m-%dT%H:%M:%S%z'
+  } >"$STATE_FILE"
+
+  pkill -RTMIN+11 waybar 2>/dev/null || true
+  notify "$profile: $description"
+  echo "Applied $profile ($theme)"
+}
+
+status() {
+  if [[ -f $STATE_FILE ]]; then
+    # shellcheck source=/dev/null
+    source "$STATE_FILE"
+    printf 'profile: %s\n' "${PROFILE:-unknown}"
+    printf 'theme: %s\n' "${THEME:-unknown}"
+    printf 'request: %s\n' "${REQUEST:-unknown}"
+    printf 'applied_at: %s\n' "${APPLIED_AT:-unknown}"
+  else
+    printf 'profile: unmanaged\n'
+    printf 'theme: %s\n' "$(omarchy-theme-current 2>/dev/null || echo unknown)"
+  fi
+}
+
+waybar() {
+  local profile="auto" label theme tooltip class
+
+  if [[ -f $STATE_FILE ]]; then
+    # shellcheck source=/dev/null
+    source "$STATE_FILE"
+    profile="${PROFILE:-auto}"
+    theme="${THEME:-$(cat "$HOME/.config/omarchy/current/theme.name" 2>/dev/null || echo unknown)}"
+    tooltip="${DESCRIPTION:-autorice profile}: ${REQUEST:-manual}"
+  else
+    theme="$(cat "$HOME/.config/omarchy/current/theme.name" 2>/dev/null || echo unknown)"
+    tooltip="autorice has not applied a profile yet"
+  fi
+
+  case "$profile" in
+    development) label="dev" ;;
+    presentation) label="present" ;;
+    *) label="$profile" ;;
+  esac
+
+  class="autorice-$profile"
+  printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' \
+    "$(json_escape "$label")" \
+    "$(json_escape "$tooltip ($theme)")" \
+    "$(json_escape "$class")"
+}
+
+main() {
+  local command="${1:-}"
+
+  case "$command" in
+    apply)
+      shift
+      [[ $# -gt 0 ]] || { usage >&2; exit 1; }
+      apply_profile "$*"
+      ;;
+    detect)
+      apply_profile "$(current_task_text)"
+      ;;
+    status)
+      status
+      ;;
+    list)
+      list_profiles
+      ;;
+    waybar)
+      waybar
+      ;;
+    ""|-h|--help|help)
+      usage
+      ;;
+    *)
+      apply_profile "$*"
+      ;;
+  esac
+}
+
+main "$@"

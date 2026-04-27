@@ -4,3 +4,5 @@
 pathrc
 hypr/hyprland.conf.bak*
 hypr/hyprlock.conf.bak*
+omarchy/current/
+waybar/*.bak.*
