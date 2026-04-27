@@ -3,6 +3,8 @@ alias pscr="zed ~/tmp/py_scratch.py"
 
 alias fig="figlet -f banner3"
 
+alias codexx='codex --yolo'
+
 alias scsv="cxxmatrix -s 'rain-forever'"
 
 alias zeditor="WAYLAND_DISPLAY= zeditor"

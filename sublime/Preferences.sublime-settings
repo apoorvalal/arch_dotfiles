@@ -86,7 +86,7 @@
 		"no_bold",
 		"no_italic"
 	],
-	"font_size": 11,
+	"font_size": 9,
 	"highlight_modified_tabs": true,
 	"ignored_packages":
 	[
