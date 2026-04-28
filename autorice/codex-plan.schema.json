@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Autorice Codex Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile",
+    "theme",
+    "power_profile",
+    "idle",
+    "dnd",
+    "description",
+    "hyprland",
+    "layout"
+  ],
+  "properties": {
+    "profile": {
+      "type": "string",
+      "enum": ["development", "focus", "gaming", "media", "presentation", "reading"]
+    },
+    "theme": {
+      "type": "string"
+    },
+    "power_profile": {
+      "type": "string",
+      "enum": ["balanced", "performance", "power-saver", "keep"]
+    },
+    "idle": {
+      "type": "string",
+      "enum": ["on", "off", "keep"]
+    },
+    "dnd": {
+      "type": "string",
+      "enum": ["on", "off", "keep"]
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "hyprland": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gaps_in",
+        "gaps_out",
+        "border_size",
+        "rounding",
+        "active_opacity",
+        "inactive_opacity",
+        "vfr"
+      ],
+      "properties": {
+        "gaps_in": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16
+        },
+        "gaps_out": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 24
+        },
+        "border_size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "rounding": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12
+        },
+        "active_opacity": {
+          "type": "number",
+          "minimum": 0.7,
+          "maximum": 1.0
+        },
+        "inactive_opacity": {
+          "type": "number",
+          "minimum": 0.55,
+          "maximum": 1.0
+        },
+        "vfr": {
+          "type": "boolean"
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspace", "arrangement", "apps"],
+      "properties": {
+        "workspace": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "arrangement": {
+          "type": "string",
+          "enum": [
+            "browser-left-stack-right",
+            "browser-right-stack-left",
+            "single-column",
+            "balanced-tiles",
+            "none"
+          ]
+        },
+        "apps": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "enum": ["browser", "terminal", "sublime", "editor"]
+          }
+        }
+      }
+    }
+  }
+}

@@ -76,6 +76,7 @@ It maps instructions such as "reading papers", "coding", "gaming", or
 
 - an Omarchy theme
 - Hyprland runtime overrides
+- state-specific desktop widgets
 - notification do-not-disturb state
 - idle locking behavior
 - power profile
@@ -86,14 +87,41 @@ Examples:
 ```bash
 autorice apply "reading papers"
 autorice apply gaming
+autorice describe "dim ui with a web browser on the left and terminal plus sublime stacked on the right"
 autorice detect
 autorice status
+autorice check
 ```
 
 `autorice detect` uses the active Hyprland window and selected process hints to
 infer the current task. The generated Hyprland override is written to
 `~/.local/state/omarchy/toggles/hypr/autorice.conf`, which is already sourced by
 `hypr/hyprland.conf`.
+
+`autorice check` walks every profile sequentially and verifies the configured
+theme, power profile, idle setting, DND setting, description, Hyprland override,
+and runtime dependency availability. Optional integrations are guarded in the
+script, so missing tools report a warning and the related step is skipped rather
+than aborting the whole profile apply.
+
+For richer layout descriptions, `autorice describe` wraps `codex exec` in
+read-only mode with a strict JSON schema. Codex only produces a plan; the local
+`autorice` script validates and applies that plan using its allowlisted themes,
+Hyprland settings, and app launchers.
+
+`Ctrl+Super+Space` is rebound from Omarchy's background menu to a generic
+ephemeral terminal. It behaves like a normal terminal, but if you run
+`autorice describe "..."` inside it, `autorice` closes that source terminal
+after applying the requested layout.
+
+Freeform layouts apply to the workspace where `autorice describe` is invoked,
+unless the request explicitly names another workspace or desktop.
+
+State profiles can also start widgets. `autorice dev` starts a small
+development monitor, while `autorice media` starts a now-playing widget powered
+by `playerctl`. Changing to a profile without widgets clears the previous
+autorice widgets. The widgets use GTK layer-shell on the compositor bottom
+layer, so normal app windows cover them instead of the widgets covering apps.
 
 ## Current Differences From Base Omarchy
 

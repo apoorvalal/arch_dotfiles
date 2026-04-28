@@ -28,6 +28,9 @@ autorice/
     gaming/
       profile.conf
       hyprland.conf
+    media/
+      profile.conf
+      hyprland.conf
     presentation/
       profile.conf
       hyprland.conf
@@ -36,6 +39,7 @@ autorice/
       hyprland.conf
 personal_scripts/
   autorice
+  autorice-widget
 ```
 
 The executable is `~/dotfiles/personal_scripts/autorice`. The profile directory
@@ -46,19 +50,159 @@ is `~/dotfiles/autorice/profiles`.
 ```bash
 autorice apply "reading papers"
 autorice apply development
+autorice describe "dim ui with a browser on the left and terminal plus sublime stacked on the right"
+autorice codex-plan "quiet browser and editor layout"
 autorice detect
 autorice status
+autorice check
 autorice list
 autorice waybar
 ```
 
 - `apply <text|profile>` classifies the text, loads the matching profile, and
+  applies it. If the text looks like a freeform layout request, it uses the
+  Codex planner path.
+- `describe <text>` always asks the Codex planner for a constrained plan and
   applies it.
+- `codex-plan <text>` prints the constrained Codex JSON plan without applying it.
 - `detect` reads the active Hyprland window class/title and selected process
   hints, then applies the inferred profile.
 - `status` prints the last applied profile, theme, request, and timestamp.
+- `check` sequentially validates dependencies and every profile config.
 - `list` prints available profile names.
 - `waybar` prints JSON for Waybar's `custom/autorice` module.
+
+## Dependency Behavior
+
+The script separates core shell dependencies from desktop integrations.
+
+Core dependencies are expected on a normal Linux install:
+
+- `bash`
+- `find`
+- `sed`
+- `paste`
+- `date`
+- `cp`
+- `grep`
+- `awk`
+
+Desktop integrations are optional. If they are missing, `autorice apply` warns
+and skips only the related step:
+
+- `omarchy-theme-set`: applies `THEME`
+- `hyprctl`: reloads Hyprland after writing the runtime override
+- `hypridle`: applies `IDLE`
+- `uwsm-app`: starts `hypridle` under UWSM when available
+- `makoctl`: applies `DND`
+- `powerprofilesctl`: applies `POWER_PROFILE`
+- `notify-send`: emits profile notifications
+- `waybar`: receives status refresh signals
+- `pgrep`: detects active helper processes such as games
+- `pkill`: stops helper processes and sends Waybar refresh signals
+- `jq`: validates and reads Codex plans
+- `codex`: produces plans for freeform layout descriptions
+- `gjs`: renders desktop widgets
+- `gtk4-layer-shell`: gives widgets a real desktop layer below normal app
+  windows
+- `playerctl`: feeds the media widget
+
+Run this after changing any profile:
+
+```bash
+autorice check
+```
+
+The check walks the profiles in sorted order and verifies:
+
+- the `profile.conf` file parses as Bash
+- `THEME` exists in user or Omarchy theme directories
+- `POWER_PROFILE` exists when `powerprofilesctl` is available
+- `IDLE` is one of `on`, `off`, or `keep`
+- `DND` is one of `on`, `off`, or `keep`
+- `DESCRIPTION` is present
+- every declared widget is supported
+- the optional Hyprland override file exists
+
+## Widgets
+
+`autorice-widget` manages small profile-specific GTK widgets:
+
+```bash
+autorice-widget restart sysmon
+autorice-widget restart media
+autorice-widget stop
+```
+
+Profiles declare widgets with `WIDGETS=...` in `profile.conf`.
+
+- `development` declares `WIDGETS=sysmon`, so `autorice dev` shows a desktop
+  monitor with load, memory, disk, and thermal information.
+- `media` declares `WIDGETS=media`, so `autorice media` shows a now-playing
+  widget based on `playerctl`.
+
+Switching to a profile with no `WIDGETS` stops existing autorice widgets. The
+widget windows are GTK layer-shell windows on the bottom layer, so they stay out
+of the tiling layout and sit below normal application windows instead of
+covering them.
+
+GJS needs `gtk4-layer-shell` to be preloaded before `libwayland-client`.
+`autorice-widget` does that for its own process with
+`/usr/lib/libgtk4-layer-shell.so`. Override that path with
+`GTK4_LAYER_SHELL_LIB=/path/to/libgtk4-layer-shell.so` if the library lives
+somewhere else.
+
+## Codex Planner
+
+`autorice describe` wraps `codex exec` for requests that are too specific for
+the keyword classifier, for example:
+
+```bash
+autorice describe "dim ui with a web browser in one half and a terminal and sublime text stacked on the other"
+```
+
+The wrapper runs Codex with:
+
+```bash
+codex --sandbox read-only -a never --cd ~/dotfiles exec --output-schema autorice/codex-plan.schema.json
+```
+
+Codex is only allowed to produce JSON matching `autorice/codex-plan.schema.json`.
+It does not get to execute commands or edit files. The local script then:
+
+1. validates the JSON with `jq`
+2. applies the selected Omarchy theme if available
+3. writes a generated Hyprland override to
+   `~/.local/state/omarchy/toggles/hypr/autorice.conf`
+4. applies power, idle, and DND settings through the guarded helpers
+5. launches allowlisted apps from the plan
+
+The app allowlist is intentionally small:
+
+- `browser`
+- `terminal`
+- `sublime`
+- `editor`
+
+The initial layout support is best-effort. For the browser-left/stack-right
+shape, `autorice` switches to the requested workspace, nudges Hyprland's dwindle
+split settings, and launches the apps in plan order. Hyprland still owns the
+actual tiling behavior, so existing windows on the workspace can affect the
+final arrangement.
+
+`Ctrl+Super+Space` opens a generic terminal with
+`AUTORICE_EPHEMERAL_TERMINAL=1`. When `autorice describe "..."` is run from
+that terminal, `autorice` records the source window address and closes only that
+terminal after applying the plan. Running `autorice` from an ordinary terminal
+does not close the terminal.
+
+Freeform layouts default to the active Hyprland workspace at invocation time.
+The Codex planner sees that current workspace in its prompt, and the local
+wrapper enforces it before applying the plan. To target another workspace, say
+so explicitly, for example `workspace 4` or `desktop 4`. When the command is run
+from the ephemeral terminal, that source terminal is moved to a hidden special
+workspace before launching the planned apps so it does not affect the tiling
+layout.
 
 ## Runtime State
 
@@ -83,6 +227,8 @@ It lowercases the request and matches keywords:
   `typora`, `notes`
 - presentation keywords: `present`, `presentation`, `talk`, `demo`, `meeting`,
   `zoom`, `share`, `stream`
+- media keywords: `media`, `music`, `playing`, `player`, `spotify`, `video`,
+  `youtube`
 - focus keywords: `focus`, `deep`, `write`, `quiet`, `dnd`, `concentrat`
 - development keywords: `dev`, `code`, `terminal`, `editor`, `vim`, `nvim`,
   `sublime`, `vscode`, `python`, `rust`, `git`
@@ -98,6 +244,7 @@ THEME=flexoki-dark
 POWER_PROFILE=balanced
 IDLE=on
 DND=off
+WIDGETS=sysmon
 DESCRIPTION="dense development layout with normal notifications"
 ```
 
@@ -105,6 +252,8 @@ DESCRIPTION="dense development layout with normal notifications"
 - `POWER_PROFILE`: value passed to `powerprofilesctl set`, if available.
 - `IDLE`: `on`, `off`, or `keep`; controls `hypridle`.
 - `DND`: `on`, `off`, or `keep`; controls Mako's `do-not-disturb` mode.
+- `WIDGETS`: optional space-separated widget list. Valid values are `sysmon`
+  and `media`.
 - `DESCRIPTION`: text used in notifications and the Waybar tooltip.
 
 Every profile may also have a `hyprland.conf` file. If present, it is copied to
@@ -146,11 +295,13 @@ THEME=flexoki-dark
 POWER_PROFILE=balanced
 IDLE=on
 DND=off
+WIDGETS=sysmon
 DESCRIPTION="dense development layout with normal notifications"
 ```
 
 Development is the default profile. It keeps the current dark Flexoki theme,
-balanced power, idle locking enabled, and notifications enabled.
+balanced power, idle locking enabled, notifications enabled, and the desktop
+system monitor widget visible.
 
 `profiles/development/hyprland.conf`:
 
@@ -250,6 +401,42 @@ misc {
 
 This removes gaps, borders, rounded corners, and opacity changes. It also turns
 off Hyprland VFR for a steadier high-performance mode.
+
+### media
+
+`profiles/media/profile.conf`:
+
+```bash
+THEME=midnight
+POWER_PROFILE=balanced
+IDLE=keep
+DND=off
+WIDGETS=media
+DESCRIPTION="media mode with now playing on the desktop"
+```
+
+Media mode keeps idle behavior unchanged, enables notifications, and starts the
+now-playing widget.
+
+`profiles/media/hyprland.conf`:
+
+```hyprlang
+general {
+  gaps_in = 3
+  gaps_out = 5
+  border_size = 1
+}
+
+decoration {
+  rounding = 5
+  active_opacity = 1.0
+  inactive_opacity = 0.94
+}
+
+misc {
+  vfr = true
+}
+```
 
 ### focus
 

@@ -1,0 +1,225 @@
+#!/bin/bash
+
+set -euo pipefail
+
+STATE_DIR="$HOME/.local/state/autorice"
+PID_DIR="$STATE_DIR/widgets"
+SCRIPT_PATH="$STATE_DIR/autorice-widget-gjs.js"
+
+mkdir -p "$PID_DIR"
+
+layer_shell_lib() {
+  local lib="${GTK4_LAYER_SHELL_LIB:-}"
+  if [[ -n $lib && -r $lib ]]; then
+    printf '%s\n' "$lib"
+  elif [[ -r /usr/lib/libgtk4-layer-shell.so ]]; then
+    printf '%s\n' "/usr/lib/libgtk4-layer-shell.so"
+  fi
+}
+
+write_gjs() {
+  cat >"$SCRIPT_PATH" <<'GJS'
+#!/usr/bin/gjs
+
+imports.gi.versions.Gtk = "4.0";
+imports.gi.versions.Gtk4LayerShell = "1.0";
+const GLib = imports.gi.GLib;
+const Gtk = imports.gi.Gtk;
+const Gtk4LayerShell = imports.gi.Gtk4LayerShell;
+
+const mode = ARGV[0] || "media";
+
+function run(command) {
+  try {
+    const [ok, out] = GLib.spawn_command_line_sync(command);
+    if (!ok) return "";
+    return new TextDecoder().decode(out).trim();
+  } catch (e) {
+    return "";
+  }
+}
+
+function compactLoad() {
+  const raw = run("cat /proc/loadavg");
+  return raw ? raw.split(/\s+/).slice(0, 3).join("  ") : "n/a";
+}
+
+function memoryLine() {
+  const raw = run("free -h | awk '/^Mem:/ {print $3 \" / \" $2}'");
+  return raw || "n/a";
+}
+
+function diskLine() {
+  const raw = run("df -h / | awk 'NR==2 {print $3 \" / \" $2 \" (\" $5 \")\"}'");
+  return raw || "n/a";
+}
+
+function cpuTemp() {
+  const raw = run("for f in /sys/class/thermal/thermal_zone*/temp; do [ -r \"$f\" ] && awk '{printf \"%.0f C\", $1/1000; exit}' \"$f\"; done");
+  return raw || "n/a";
+}
+
+function mediaLine(format) {
+  return run(`playerctl metadata --format '${format}' 2>/dev/null`);
+}
+
+function mediaStatus() {
+  return run("playerctl status 2>/dev/null") || "No player";
+}
+
+function configureLayerWindow(win) {
+  Gtk4LayerShell.init_for_window(win);
+  Gtk4LayerShell.set_namespace(win, `autorice-${mode}`);
+  Gtk4LayerShell.set_layer(win, Gtk4LayerShell.Layer.BOTTOM);
+  Gtk4LayerShell.set_keyboard_mode(win, Gtk4LayerShell.KeyboardMode.NONE);
+  Gtk4LayerShell.set_exclusive_zone(win, 0);
+  Gtk4LayerShell.set_anchor(win, Gtk4LayerShell.Edge.TOP, true);
+  Gtk4LayerShell.set_anchor(win, Gtk4LayerShell.Edge.LEFT, true);
+  Gtk4LayerShell.set_margin(win, Gtk4LayerShell.Edge.TOP, 58);
+  Gtk4LayerShell.set_margin(win, Gtk4LayerShell.Edge.LEFT, 24);
+}
+
+function buildWindow(app) {
+  const win = new Gtk.ApplicationWindow({
+    application: app,
+    title: mode === "sysmon" ? "Autorice Dev Monitor" : "Autorice Now Playing",
+    default_width: mode === "sysmon" ? 340 : 420,
+    default_height: mode === "sysmon" ? 210 : 150,
+    resizable: false
+  });
+  configureLayerWindow(win);
+
+  const css = new Gtk.CssProvider();
+  css.load_from_data(`
+    window {
+      background: rgba(14, 14, 14, 0.86);
+      color: #ece6d4;
+      border-radius: 10px;
+      border: 1px solid rgba(236, 230, 212, 0.2);
+    }
+    box { padding: 16px; }
+    .title { font-size: 15px; font-weight: 700; }
+    .line { font-size: 13px; }
+    .muted { color: #a9a094; }
+  `, -1);
+
+  Gtk.StyleContext.add_provider_for_display(
+    win.get_display(),
+    css,
+    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+  );
+
+  const box = new Gtk.Box({
+    orientation: Gtk.Orientation.VERTICAL,
+    spacing: 8,
+    margin_top: 16,
+    margin_bottom: 16,
+    margin_start: 16,
+    margin_end: 16
+  });
+
+  const title = new Gtk.Label({ xalign: 0 });
+  title.add_css_class("title");
+  box.append(title);
+
+  const lines = [];
+  for (let i = 0; i < (mode === "sysmon" ? 4 : 3); i++) {
+    const label = new Gtk.Label({ xalign: 0, wrap: true });
+    label.add_css_class(i === 2 && mode === "media" ? "muted" : "line");
+    lines.push(label);
+    box.append(label);
+  }
+
+  function refresh() {
+    if (mode === "sysmon") {
+      title.set_label("Development Monitor");
+      lines[0].set_label(`Load: ${compactLoad()}`);
+      lines[1].set_label(`Memory: ${memoryLine()}`);
+      lines[2].set_label(`Disk: ${diskLine()}`);
+      lines[3].set_label(`Temp: ${cpuTemp()}`);
+    } else {
+      const status = mediaStatus();
+      const track = mediaLine("{{title}}") || "Nothing playing";
+      const artist = mediaLine("{{artist}}");
+      title.set_label(status === "Playing" ? "Now Playing" : status);
+      lines[0].set_label(track);
+      lines[1].set_label(artist || "No artist");
+      lines[2].set_label(mediaLine("{{playerName}}") || "playerctl");
+    }
+    return GLib.SOURCE_CONTINUE;
+  }
+
+  refresh();
+  GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, mode === "sysmon" ? 3 : 2, refresh);
+
+  win.set_child(box);
+  return win;
+}
+
+const app = new Gtk.Application({ application_id: `org.autorice.${mode}` });
+app.connect("activate", () => {
+  const win = buildWindow(app);
+  win.present();
+});
+app.run([]);
+GJS
+
+  chmod +x "$SCRIPT_PATH"
+}
+
+stop_widgets() {
+  if compgen -G "$PID_DIR/*.pid" >/dev/null; then
+    for pid_file in "$PID_DIR"/*.pid; do
+      kill "$(cat "$pid_file")" 2>/dev/null || true
+      rm -f "$pid_file"
+    done
+  fi
+  pkill -f "$SCRIPT_PATH" 2>/dev/null || true
+}
+
+start_widget() {
+  local mode="$1"
+
+  write_gjs
+
+  case "$mode" in
+    sysmon | media) ;;
+    *)
+      echo "Unknown widget: $mode" >&2
+      exit 1
+      ;;
+  esac
+
+  local lib preload
+  lib="$(layer_shell_lib || true)"
+  preload="${lib}${LD_PRELOAD:+:$LD_PRELOAD}"
+
+  if [[ -n $lib ]]; then
+    setsid env LD_PRELOAD="$preload" gjs "$SCRIPT_PATH" "$mode" >/dev/null 2>&1 &
+  else
+    setsid gjs "$SCRIPT_PATH" "$mode" >/dev/null 2>&1 &
+  fi
+  echo "$!" >"$PID_DIR/$mode.pid"
+}
+
+case "${1:-}" in
+  start)
+    shift
+    [[ $# -gt 0 ]] || exit 0
+    for widget in "$@"; do
+      start_widget "$widget"
+    done
+    ;;
+  stop)
+    stop_widgets
+    ;;
+  restart)
+    shift
+    stop_widgets
+    "$0" start "$@"
+    ;;
+  *)
+    echo "Usage: autorice-widget start <sysmon|media>... | stop | restart <sysmon|media>..." >&2
+    exit 1
+    ;;
+esac

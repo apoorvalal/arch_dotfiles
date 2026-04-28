@@ -7,21 +7,28 @@ PROFILE_DIR="$DOTFILES_DIR/autorice/profiles"
 STATE_DIR="$HOME/.local/state/autorice"
 HYPR_TOGGLE_DIR="$HOME/.local/state/omarchy/toggles/hypr"
 STATE_FILE="$STATE_DIR/current"
+CODEX_PLAN_SCHEMA="$DOTFILES_DIR/autorice/codex-plan.schema.json"
+CODEX_PLAN_FILE="$STATE_DIR/codex-plan.json"
+CODEX_LOG_FILE="$STATE_DIR/codex-plan.log"
 
 export OMARCHY_PATH="${OMARCHY_PATH:-$HOME/.local/share/omarchy}"
-export PATH="$OMARCHY_PATH/bin:$PATH"
+export PATH="$DOTFILES_DIR/personal_scripts:$OMARCHY_PATH/bin:$PATH"
 
 usage() {
   cat <<'USAGE'
 Usage:
   autorice apply <natural-language request|profile>
   autorice detect
+  autorice describe <general desktop request>
+  autorice codex-plan <general desktop request>
   autorice status
+  autorice check
   autorice list
   autorice waybar
 
 Examples:
   autorice apply "reading papers for a while"
+  autorice describe "dim ui with a browser on the left and terminal plus sublime stacked on the right"
   autorice apply development
   autorice detect
 USAGE
@@ -31,6 +38,55 @@ notify() {
   if command -v notify-send >/dev/null 2>&1; then
     notify-send -u low "autorice" "$1"
   fi
+}
+
+warn() {
+  printf 'autorice: %s\n' "$*" >&2
+}
+
+signal_waybar() {
+  local signal="$1"
+
+  command -v pkill >/dev/null 2>&1 || return 0
+  pkill -RTMIN+"$signal" waybar 2>/dev/null || true
+}
+
+ephemeral_terminal_address() {
+  [[ ${AUTORICE_EPHEMERAL_TERMINAL:-} == "1" ]] || return 0
+  command -v hyprctl >/dev/null 2>&1 || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+
+  hyprctl activewindow -j 2>/dev/null | jq -r '
+    select((.class // "") | test("(ghostty|alacritty|kitty|terminal)"; "i")) |
+    .address // empty
+  '
+}
+
+close_ephemeral_terminal() {
+  local address="$1"
+
+  [[ -n $address ]] || return 0
+  [[ ${AUTORICE_EPHEMERAL_TERMINAL:-} == "1" ]] || return 0
+  command -v hyprctl >/dev/null 2>&1 || return 0
+
+  hyprctl dispatch closewindow "address:$address" >/dev/null 2>&1 || true
+}
+
+hide_ephemeral_terminal() {
+  local address="$1"
+
+  [[ -n $address ]] || return 0
+  [[ ${AUTORICE_EPHEMERAL_TERMINAL:-} == "1" ]] || return 0
+  command -v hyprctl >/dev/null 2>&1 || return 0
+
+  hyprctl dispatch movetoworkspacesilent "special:autorice,address:$address" >/dev/null 2>&1 || true
+}
+
+active_workspace_id() {
+  command -v hyprctl >/dev/null 2>&1 || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+
+  hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // empty'
 }
 
 json_escape() {
@@ -47,6 +103,101 @@ profile_exists() {
 
 list_profiles() {
   find "$PROFILE_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
+}
+
+available_themes() {
+  find "$HOME/.config/omarchy/themes" "$OMARCHY_PATH/themes" \
+    -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -u
+}
+
+theme_exists() {
+  local theme="$1"
+
+  [[ -d $HOME/.config/omarchy/themes/$theme || -d $OMARCHY_PATH/themes/$theme ]]
+}
+
+available_power_profiles() {
+  command -v powerprofilesctl >/dev/null 2>&1 || return 0
+
+  powerprofilesctl list 2>/dev/null | awk -F: '/^[* ]*(performance|balanced|power-saver):/ {
+    gsub(/^[* ]+|[ \t]+$/, "", $1)
+    print $1
+  }'
+}
+
+comma_join() {
+  paste -sd ',' - | sed 's/,/, /g'
+}
+
+power_profile_exists() {
+  local profile="$1"
+
+  [[ -z $profile ]] && return 0
+  command -v powerprofilesctl >/dev/null 2>&1 || return 0
+  available_power_profiles | grep -qx "$profile"
+}
+
+looks_like_general_request() {
+  local input="${*,,}"
+
+  [[ $input == *half* ||
+    $input == *stack* ||
+    $input == *split* ||
+    $input == *tile* ||
+    $input == *layout* ||
+    $input == *browser* ||
+    $input == *sublime* ||
+    $input == *dim* ||
+    $input == *ui* ]]
+}
+
+widgets_for_profile() {
+  local profile="$1"
+  local profile_file="$PROFILE_DIR/$profile/profile.conf"
+
+  [[ -f $profile_file ]] || return 0
+  unset WIDGETS
+  # shellcheck source=/dev/null
+  source "$profile_file"
+  printf '%s\n' "${WIDGETS:-}"
+}
+
+set_widgets() {
+  local widgets="${1:-}"
+
+  command -v autorice-widget >/dev/null 2>&1 || return 0
+
+  if [[ -n $widgets ]]; then
+    # shellcheck disable=SC2086
+    autorice-widget restart $widgets >/dev/null 2>&1 || warn "failed to start widgets: $widgets"
+  else
+    autorice-widget stop >/dev/null 2>&1 || true
+  fi
+}
+
+requested_workspace() {
+  local input="${*,,}"
+
+  if [[ $input =~ (workspace|desktop|desk)[[:space:]]+([0-9]+) ]]; then
+    printf '%s\n' "${BASH_REMATCH[2]}"
+  fi
+}
+
+target_workspace() {
+  local request="$1"
+  local planned_workspace="${2:-}"
+  local current_workspace="${3:-}"
+  local requested
+
+  requested="$(requested_workspace "$request")"
+
+  if [[ -n $requested ]]; then
+    printf '%s\n' "$requested"
+  elif [[ -n $current_workspace ]]; then
+    printf '%s\n' "$current_workspace"
+  else
+    printf '%s\n' "${planned_workspace:-1}"
+  fi
 }
 
 classify() {
@@ -67,6 +218,9 @@ classify() {
     *present*|*presentation*|*talk*|*demo*|*meeting*|*zoom*|*share*|*stream*)
       printf 'presentation\n'
       ;;
+    *media*|*music*|*playing*|*player*|*spotify*|*video*|*youtube*)
+      printf 'media\n'
+      ;;
     *focus*|*deep*|*write*|*writing*|*quiet*|*dnd*|*concentrat*)
       printf 'focus\n'
       ;;
@@ -79,6 +233,231 @@ classify() {
   esac
 }
 
+codex_prompt() {
+  local request="$1"
+  local current_workspace="${2:-unknown}"
+
+  cat <<PROMPT
+You are planning a local Omarchy/Hyprland autorice change.
+
+Return only JSON matching the provided schema. Do not include markdown.
+Do not execute commands, edit files, browse, or ask follow-up questions.
+
+User request:
+$request
+
+Current Hyprland workspace:
+$current_workspace
+
+Available Omarchy themes:
+$(available_themes | comma_join)
+
+Available power profiles:
+$(available_power_profiles | comma_join)
+
+Valid profiles:
+development, focus, gaming, media, presentation, reading
+
+Guidance:
+- Use profile=focus for dim, quiet, low-distraction, or writing requests.
+- Use profile=development for coding, terminal, editor, or browser+terminal work.
+- Use profile=reading for documents, PDFs, papers, books, or annotation.
+- Use profile=presentation for sharing, demos, talks, or meetings.
+- Use profile=gaming for games, Steam, high FPS, or performance requests.
+- Use profile=media for music, video, now-playing, player, Spotify, or YouTube requests.
+- Prefer theme=midnight for "dim" or "dark"; flexoki-dark for development; flexoki-light for reading.
+- For "web browser in one half and terminal/editor stacked on the other", use arrangement=browser-left-stack-right and apps=["browser","terminal","sublime"].
+- Set layout.workspace to the current Hyprland workspace unless the user explicitly names a different workspace or desktop.
+- Keep values conservative. Only choose themes from the available theme list.
+PROMPT
+}
+
+codex_plan() {
+  local request="$1"
+  local current_workspace="${2:-}"
+  local output planned_workspace workspace patched_output
+
+  if ! command -v jq >/dev/null 2>&1; then
+    warn "jq is not installed; falling back to local profile classification"
+    return 1
+  fi
+
+  if ! command -v codex >/dev/null 2>&1; then
+    warn "codex is not installed; falling back to local profile classification"
+    return 1
+  fi
+
+  if [[ ! -f $CODEX_PLAN_SCHEMA ]]; then
+    warn "missing Codex plan schema: $CODEX_PLAN_SCHEMA"
+    return 1
+  fi
+
+  mkdir -p "$STATE_DIR"
+  output="$(mktemp "$STATE_DIR/codex-plan.XXXXXX.json")"
+
+  if ! codex \
+    --sandbox read-only \
+    -a never \
+    --cd "$DOTFILES_DIR" \
+    exec \
+    --output-schema "$CODEX_PLAN_SCHEMA" \
+    --output-last-message "$output" \
+    --color never \
+    "$(codex_prompt "$request" "$current_workspace")" >"$CODEX_LOG_FILE" 2>&1 </dev/null; then
+    rm -f "$output"
+    warn "codex exec failed; see $CODEX_LOG_FILE"
+    warn "falling back to local profile classification"
+    return 1
+  fi
+
+  if ! jq -e . "$output" >/dev/null 2>&1; then
+    rm -f "$output"
+    warn "codex returned invalid JSON; falling back to local profile classification"
+    return 1
+  fi
+
+  planned_workspace="$(jq -r '.layout.workspace // empty' "$output")"
+  workspace="$(target_workspace "$request" "$planned_workspace" "$current_workspace")"
+  patched_output="$(mktemp "$STATE_DIR/codex-plan.XXXXXX.json")"
+  jq --argjson workspace "$workspace" '.layout.workspace = $workspace' "$output" >"$patched_output"
+  rm -f "$output"
+  mv "$patched_output" "$CODEX_PLAN_FILE"
+  cat "$CODEX_PLAN_FILE"
+}
+
+write_plan_hyprland() {
+  local plan_file="$1"
+
+  cat >"$HYPR_TOGGLE_DIR/autorice.conf" <<EOF
+# Managed by autorice Codex planner.
+general {
+  gaps_in = $(jq -r '.hyprland.gaps_in' "$plan_file")
+  gaps_out = $(jq -r '.hyprland.gaps_out' "$plan_file")
+  border_size = $(jq -r '.hyprland.border_size' "$plan_file")
+}
+
+decoration {
+  rounding = $(jq -r '.hyprland.rounding' "$plan_file")
+  active_opacity = $(jq -r '.hyprland.active_opacity' "$plan_file")
+  inactive_opacity = $(jq -r '.hyprland.inactive_opacity' "$plan_file")
+}
+
+misc {
+  vfr = $(jq -r '.hyprland.vfr' "$plan_file")
+}
+EOF
+}
+
+launch_layout_app() {
+  local app="$1"
+
+  case "$app" in
+    browser)
+      if command -v omarchy-launch-browser >/dev/null 2>&1; then
+        setsid omarchy-launch-browser >/dev/null 2>&1 &
+      fi
+      ;;
+    terminal)
+      if command -v xdg-terminal-exec >/dev/null 2>&1; then
+        setsid xdg-terminal-exec >/dev/null 2>&1 &
+      elif command -v ghostty >/dev/null 2>&1; then
+        setsid ghostty >/dev/null 2>&1 &
+      fi
+      ;;
+    sublime)
+      if command -v subl >/dev/null 2>&1; then
+        setsid subl --launch-or-new-window >/dev/null 2>&1 &
+      elif command -v gtk-launch >/dev/null 2>&1; then
+        setsid gtk-launch sublime_text >/dev/null 2>&1 &
+      fi
+      ;;
+    editor)
+      if command -v omarchy-launch-editor >/dev/null 2>&1; then
+        setsid omarchy-launch-editor >/dev/null 2>&1 &
+      fi
+      ;;
+  esac
+}
+
+apply_plan_layout() {
+  local plan_file="$1"
+  local workspace arrangement app
+
+  command -v jq >/dev/null 2>&1 || return 0
+  command -v hyprctl >/dev/null 2>&1 || return 0
+
+  workspace="$(jq -r '.layout.workspace' "$plan_file")"
+  arrangement="$(jq -r '.layout.arrangement' "$plan_file")"
+
+  hyprctl dispatch workspace "$workspace" >/dev/null 2>&1 || true
+
+  if [[ $arrangement == "browser-left-stack-right" ]]; then
+    hyprctl keyword dwindle:preserve_split true >/dev/null 2>&1 || true
+    hyprctl keyword dwindle:force_split 2 >/dev/null 2>&1 || true
+  fi
+
+  while read -r app; do
+    launch_layout_app "$app"
+    sleep 0.6
+  done < <(jq -r '.layout.apps[]?' "$plan_file")
+}
+
+apply_codex_plan() {
+  local request="$*"
+  local profile theme power idle dnd description terminal_address workspace widgets
+
+  terminal_address="$(ephemeral_terminal_address)"
+  workspace="$(active_workspace_id)"
+
+  codex_plan "$request" "$workspace" >/dev/null || {
+    apply_profile "$request"
+    close_ephemeral_terminal "$terminal_address"
+    return
+  }
+
+  profile="$(jq -r '.profile' "$CODEX_PLAN_FILE")"
+  theme="$(jq -r '.theme' "$CODEX_PLAN_FILE")"
+  power="$(jq -r '.power_profile' "$CODEX_PLAN_FILE")"
+  [[ $power == "keep" ]] && power=""
+  idle="$(jq -r '.idle' "$CODEX_PLAN_FILE")"
+  dnd="$(jq -r '.dnd' "$CODEX_PLAN_FILE")"
+  description="$(jq -r '.description' "$CODEX_PLAN_FILE")"
+  widgets="$(widgets_for_profile "$profile")"
+
+  mkdir -p "$STATE_DIR" "$HYPR_TOGGLE_DIR"
+
+  if theme_exists "$theme" && command -v omarchy-theme-set >/dev/null 2>&1; then
+    omarchy-theme-set "$theme" || warn "failed to apply theme $theme"
+  else
+    warn "skipping unavailable Codex theme: $theme"
+  fi
+
+  write_plan_hyprland "$CODEX_PLAN_FILE"
+  if command -v hyprctl >/dev/null 2>&1; then
+    hyprctl reload >/dev/null 2>&1 || warn "failed to reload Hyprland"
+  fi
+
+  set_power_profile "$power"
+  set_idle "$idle"
+  set_dnd "$dnd"
+  set_widgets "$widgets"
+  hide_ephemeral_terminal "$terminal_address"
+  apply_plan_layout "$CODEX_PLAN_FILE"
+
+  {
+    printf 'PROFILE=%q\n' "$profile"
+    printf 'THEME=%q\n' "$theme"
+    printf 'REQUEST=%q\n' "$request"
+    printf 'DESCRIPTION=%q\n' "$description"
+    date '+APPLIED_AT=%Y-%m-%dT%H:%M:%S%z'
+  } >"$STATE_FILE"
+
+  signal_waybar 11
+  notify "$profile: $description"
+  echo "Applied Codex plan: $description ($theme)"
+  close_ephemeral_terminal "$terminal_address"
+}
+
 current_task_text() {
   local text=""
 
@@ -89,7 +468,7 @@ current_task_text() {
       -e 's/^[[:space:]]*title:[[:space:]]*//p' | paste -sd ' ' -)"
   fi
 
-  if pgrep -a 'steam|gamescope|lutris|heroic' >/dev/null 2>&1; then
+  if command -v pgrep >/dev/null 2>&1 && pgrep -a 'steam|gamescope|lutris|heroic' >/dev/null 2>&1; then
     text="$text gaming steam gamescope"
   fi
 
@@ -99,45 +478,73 @@ current_task_text() {
 set_dnd() {
   local desired="$1"
 
-  command -v makoctl >/dev/null 2>&1 || return 0
+  [[ $desired == "keep" ]] && return 0
 
-  if [[ $desired == "on" ]]; then
-    makoctl mode | grep -q '^do-not-disturb$' || makoctl mode -a do-not-disturb >/dev/null
-  elif [[ $desired == "off" ]]; then
-    makoctl mode | grep -q '^do-not-disturb$' && makoctl mode -r do-not-disturb >/dev/null
+  if ! command -v makoctl >/dev/null 2>&1; then
+    warn "skipping DND=$desired because makoctl is not installed"
+    return 0
   fi
 
-  pkill -RTMIN+10 waybar 2>/dev/null || true
+  if [[ $desired == "on" ]]; then
+    makoctl mode | grep -q '^do-not-disturb$' || makoctl mode -a do-not-disturb >/dev/null || warn "failed to enable do-not-disturb"
+  elif [[ $desired == "off" ]]; then
+    if makoctl mode | grep -q '^do-not-disturb$'; then
+      makoctl mode -r do-not-disturb >/dev/null || warn "failed to disable do-not-disturb"
+    fi
+  fi
+
+  signal_waybar 10
 }
 
 set_idle() {
   local desired="$1"
 
-  command -v hypridle >/dev/null 2>&1 || return 0
+  [[ $desired == "keep" ]] && return 0
 
-  if [[ $desired == "on" ]]; then
-    if ! pgrep -x hypridle >/dev/null; then
-      uwsm-app -- hypridle >/dev/null 2>&1 &
-    fi
-  elif [[ $desired == "off" ]]; then
-    pkill -x hypridle 2>/dev/null || true
+  if ! command -v hypridle >/dev/null 2>&1; then
+    warn "skipping IDLE=$desired because hypridle is not installed"
+    return 0
   fi
 
-  pkill -RTMIN+9 waybar 2>/dev/null || true
+  if [[ $desired == "on" ]]; then
+    if ! command -v pgrep >/dev/null 2>&1 || ! pgrep -x hypridle >/dev/null; then
+      if command -v uwsm-app >/dev/null 2>&1; then
+        uwsm-app -- hypridle >/dev/null 2>&1 &
+      else
+        hypridle >/dev/null 2>&1 &
+      fi
+    fi
+  elif [[ $desired == "off" ]]; then
+    if command -v pkill >/dev/null 2>&1; then
+      pkill -x hypridle 2>/dev/null || true
+    else
+      warn "skipping hypridle stop because pkill is not installed"
+    fi
+  fi
+
+  signal_waybar 9
 }
 
 set_power_profile() {
   local profile="$1"
 
   [[ -n $profile ]] || return 0
-  command -v powerprofilesctl >/dev/null 2>&1 || return 0
+  if ! command -v powerprofilesctl >/dev/null 2>&1; then
+    warn "skipping POWER_PROFILE=$profile because powerprofilesctl is not installed"
+    return 0
+  fi
 
-  powerprofilesctl set "$profile" >/dev/null 2>&1 || true
+  if ! power_profile_exists "$profile"; then
+    warn "skipping unknown POWER_PROFILE=$profile"
+    return 0
+  fi
+
+  powerprofilesctl set "$profile" >/dev/null 2>&1 || warn "failed to set power profile $profile"
 }
 
 apply_profile() {
   local request="$*"
-  local profile profile_file theme power idle dnd description
+  local profile profile_file theme power idle dnd widgets description
 
   profile="$(classify "$request")"
   profile_file="$PROFILE_DIR/$profile/profile.conf"
@@ -147,6 +554,7 @@ apply_profile() {
     exit 1
   fi
 
+  unset THEME POWER_PROFILE IDLE DND WIDGETS DESCRIPTION
   # shellcheck source=/dev/null
   source "$profile_file"
 
@@ -154,22 +562,34 @@ apply_profile() {
   power="${POWER_PROFILE:-}"
   idle="${IDLE:-keep}"
   dnd="${DND:-keep}"
+  widgets="${WIDGETS:-}"
   description="${DESCRIPTION:-$profile}"
 
   mkdir -p "$STATE_DIR" "$HYPR_TOGGLE_DIR"
 
   if [[ -n $theme ]]; then
-    omarchy-theme-set "$theme"
+    if ! command -v omarchy-theme-set >/dev/null 2>&1; then
+      warn "skipping THEME=$theme because omarchy-theme-set is not installed"
+    elif ! theme_exists "$theme"; then
+      warn "skipping unknown THEME=$theme"
+    else
+      omarchy-theme-set "$theme" || warn "failed to apply theme $theme"
+    fi
   fi
 
   if [[ -f $PROFILE_DIR/$profile/hyprland.conf ]]; then
     cp "$PROFILE_DIR/$profile/hyprland.conf" "$HYPR_TOGGLE_DIR/autorice.conf"
-    hyprctl reload >/dev/null 2>&1 || true
+    if command -v hyprctl >/dev/null 2>&1; then
+      hyprctl reload >/dev/null 2>&1 || warn "failed to reload Hyprland"
+    else
+      warn "wrote Hyprland override but skipped reload because hyprctl is not installed"
+    fi
   fi
 
   set_power_profile "$power"
   set_idle "$idle"
   set_dnd "$dnd"
+  set_widgets "$widgets"
 
   {
     printf 'PROFILE=%q\n' "$profile"
@@ -179,9 +599,147 @@ apply_profile() {
     date '+APPLIED_AT=%Y-%m-%dT%H:%M:%S%z'
   } >"$STATE_FILE"
 
-  pkill -RTMIN+11 waybar 2>/dev/null || true
+  signal_waybar 11
   notify "$profile: $description"
   echo "Applied $profile ($theme)"
+}
+
+check_dependencies() {
+  local missing=0
+  local command
+  local layer_shell_lib="${GTK4_LAYER_SHELL_LIB:-/usr/lib/libgtk4-layer-shell.so}"
+
+  echo "Dependencies:"
+
+  for command in bash find sed paste date cp grep awk mktemp cat; do
+    if command -v "$command" >/dev/null 2>&1; then
+      printf '  ok       %s\n' "$command"
+    else
+      printf '  missing  %s (required)\n' "$command"
+      missing=1
+    fi
+  done
+
+  for command in omarchy-theme-set hyprctl hypridle uwsm-app makoctl powerprofilesctl notify-send waybar pgrep pkill jq codex gjs playerctl autorice-widget; do
+    if command -v "$command" >/dev/null 2>&1; then
+      printf '  ok       %s\n' "$command"
+    else
+      printf '  missing  %s (optional; related profile step will be skipped)\n' "$command"
+    fi
+  done
+
+  if command -v gjs >/dev/null 2>&1 &&
+    [[ -r $layer_shell_lib ]] &&
+    LD_PRELOAD="$layer_shell_lib${LD_PRELOAD:+:$LD_PRELOAD}" gjs -c "imports.gi.versions.Gtk='4.0'; imports.gi.versions.Gtk4LayerShell='1.0'; const Gtk=imports.gi.Gtk; const Layer=imports.gi.Gtk4LayerShell; Gtk.init(); const win=new Gtk.Window({title:'autorice-check'}); Layer.init_for_window(win); if (!Layer.is_supported() || !Layer.is_layer_window(win)) throw new Error('Gtk4LayerShell unavailable');" >/dev/null 2>&1; then
+    printf '  ok       %s\n' "Gtk4LayerShell GJS namespace"
+  else
+    printf '  missing  %s (optional; widgets will not render as desktop layers)\n' "Gtk4LayerShell GJS namespace"
+  fi
+
+  return "$missing"
+}
+
+validate_profiles() {
+  local failed=0
+  local profile profile_file hypr_file theme power idle dnd widgets description
+
+  echo "Profiles:"
+
+  while read -r profile; do
+    profile_file="$PROFILE_DIR/$profile/profile.conf"
+    hypr_file="$PROFILE_DIR/$profile/hyprland.conf"
+    unset THEME POWER_PROFILE IDLE DND WIDGETS DESCRIPTION
+
+    printf '  %s\n' "$profile"
+
+    if ! bash -n "$profile_file"; then
+      failed=1
+      continue
+    fi
+
+    # shellcheck source=/dev/null
+    source "$profile_file"
+
+    theme="${THEME:-}"
+    power="${POWER_PROFILE:-}"
+    idle="${IDLE:-keep}"
+    dnd="${DND:-keep}"
+    widgets="${WIDGETS:-}"
+    description="${DESCRIPTION:-}"
+
+    if [[ -z $theme ]]; then
+      printf '    missing THEME\n'
+      failed=1
+    elif theme_exists "$theme"; then
+      printf '    theme ok: %s\n' "$theme"
+    else
+      printf '    missing theme: %s\n' "$theme"
+      failed=1
+    fi
+
+    if power_profile_exists "$power"; then
+      printf '    power ok: %s\n' "${power:-keep}"
+    else
+      printf '    missing power profile: %s\n' "$power"
+      failed=1
+    fi
+
+    if [[ $idle =~ ^(on|off|keep)$ ]]; then
+      printf '    idle ok: %s\n' "$idle"
+    else
+      printf '    invalid IDLE: %s\n' "$idle"
+      failed=1
+    fi
+
+    if [[ $dnd =~ ^(on|off|keep)$ ]]; then
+      printf '    dnd ok: %s\n' "$dnd"
+    else
+      printf '    invalid DND: %s\n' "$dnd"
+      failed=1
+    fi
+
+    if [[ -n $description ]]; then
+      printf '    description ok\n'
+    else
+      printf '    missing DESCRIPTION\n'
+      failed=1
+    fi
+
+    if [[ -n $widgets ]]; then
+      for widget in $widgets; do
+        if [[ $widget =~ ^(sysmon|media)$ ]]; then
+          printf '    widget ok: %s\n' "$widget"
+        else
+          printf '    invalid widget: %s\n' "$widget"
+          failed=1
+        fi
+      done
+    else
+      printf '    widgets: none\n'
+    fi
+
+    if [[ -f $hypr_file ]]; then
+      printf '    hyprland override ok\n'
+    else
+      printf '    hyprland override absent; profile will only change system state\n'
+    fi
+  done < <(list_profiles)
+
+  return "$failed"
+}
+
+check_all() {
+  local failed=0
+
+  check_dependencies || failed=1
+  validate_profiles || failed=1
+
+  if (( failed )); then
+    echo "autorice check failed"
+    return 1
+  fi
+
+  echo "autorice check passed"
 }
 
 status() {
@@ -232,13 +790,30 @@ main() {
     apply)
       shift
       [[ $# -gt 0 ]] || { usage >&2; exit 1; }
-      apply_profile "$*"
+      if profile_exists "$*" || ! looks_like_general_request "$*"; then
+        apply_profile "$*"
+      else
+        apply_codex_plan "$*"
+      fi
+      ;;
+    describe|codex)
+      shift
+      [[ $# -gt 0 ]] || { usage >&2; exit 1; }
+      apply_codex_plan "$*"
+      ;;
+    codex-plan|plan)
+      shift
+      [[ $# -gt 0 ]] || { usage >&2; exit 1; }
+      codex_plan "$*" "$(active_workspace_id)"
       ;;
     detect)
       apply_profile "$(current_task_text)"
       ;;
     status)
       status
+      ;;
+    check|doctor)
+      check_all
       ;;
     list)
       list_profiles
