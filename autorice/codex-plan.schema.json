@@ -47,8 +47,7 @@
         "border_size",
         "rounding",
         "active_opacity",
-        "inactive_opacity",
-        "vfr"
+        "inactive_opacity"
       ],
       "properties": {
         "gaps_in": {
@@ -78,11 +77,8 @@
         },
         "inactive_opacity": {
           "type": "number",
-          "minimum": 0.55,
+          "minimum": 1.0,
           "maximum": 1.0
-        },
-        "vfr": {
-          "type": "boolean"
         }
       }
     },

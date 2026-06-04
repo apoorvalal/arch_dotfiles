@@ -86,8 +86,9 @@ Examples:
 
 ```bash
 autorice apply "reading papers"
+autorice "bright sunshine work"
 autorice apply gaming
-autorice describe "dim ui with a web browser on the left and terminal plus sublime stacked on the right"
+autorice apply "dim ui with a web browser on the left and terminal plus sublime stacked on the right"
 autorice detect
 autorice status
 autorice check
@@ -104,17 +105,18 @@ and runtime dependency availability. Optional integrations are guarded in the
 script, so missing tools report a warning and the related step is skipped rather
 than aborting the whole profile apply.
 
-For richer layout descriptions, `autorice describe` wraps `codex exec` in
+For natural-language requests, `autorice apply <text>` wraps `codex exec` in
 read-only mode with a strict JSON schema. Codex only produces a plan; the local
 `autorice` script validates and applies that plan using its allowlisted themes,
-Hyprland settings, and app launchers.
+Hyprland settings, and app launchers. Exact profile names such as
+`autorice apply gaming` still apply locally without Codex.
 
 `Ctrl+Super+Space` is rebound from Omarchy's background menu to a generic
-ephemeral terminal. It behaves like a normal terminal, but if you run
-`autorice describe "..."` inside it, `autorice` closes that source terminal
-after applying the requested layout.
+ephemeral terminal. It behaves like a normal terminal, but if you run a
+natural-language `autorice` request inside it, `autorice` closes that source
+terminal after applying the requested layout.
 
-Freeform layouts apply to the workspace where `autorice describe` is invoked,
+Freeform layouts apply to the workspace where `autorice` is invoked,
 unless the request explicitly names another workspace or desktop.
 
 State profiles can also start widgets. `autorice dev` starts a small

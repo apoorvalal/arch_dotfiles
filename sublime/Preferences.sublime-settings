@@ -91,6 +91,7 @@
 	"ignored_packages":
 	[
 		"LaTeX Word Count",
+		"Package Control",
 		"SideBarEnhancements",
 	],
 	"line_padding_bottom": 1,
@@ -124,7 +125,7 @@
 	"wide_caret": true,
 	"word_wrap": true,
 	"color_scheme": "Packages/Colorsublime - Themes/Brogrammer.tmTheme",
-	"index_files": true,
+	"index_files": false,
 	"auto_complete_triggers":
 	[
 		{

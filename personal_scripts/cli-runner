@@ -1,0 +1,66 @@
+#!/bin/bash
+
+set -euo pipefail
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/cli-runner"
+HISTORY_FILE="$STATE_DIR/history"
+APP_ID="org.omarchy.runner"
+TITLE="Command Runner"
+
+runner_cwd() {
+  if command -v omarchy-cmd-terminal-cwd >/dev/null 2>&1; then
+    omarchy-cmd-terminal-cwd 2>/dev/null && return 0
+  fi
+
+  printf '%s\n' "$HOME"
+}
+
+run_session() {
+  local command status cwd
+
+  mkdir -p "$STATE_DIR"
+  touch "$HISTORY_FILE"
+
+  cwd="$(runner_cwd)"
+  cd "$cwd" 2>/dev/null || cd "$HOME"
+
+  history -r "$HISTORY_FILE" 2>/dev/null || true
+
+  printf 'cwd: %s\n' "$PWD"
+  read -e -p 'run> ' command
+
+  [[ -n ${command//[[:space:]]/} ]] || exit 0
+
+  history -s "$command"
+  history -w "$HISTORY_FILE" 2>/dev/null || true
+
+  printf '\n'
+  set +e
+  eval "$command"
+  status=$?
+  set -e
+
+  printf '\nexit %s - press Enter to close' "$status"
+  read -r _
+  exit "$status"
+}
+
+launch_terminal() {
+  local cwd
+
+  cwd="$(runner_cwd)"
+  exec setsid uwsm-app -- xdg-terminal-exec \
+    --app-id="$APP_ID" \
+    --title="$TITLE" \
+    --dir="$cwd" \
+    -e "$0" --session
+}
+
+case "${1:-}" in
+  --session)
+    run_session
+    ;;
+  *)
+    launch_terminal
+    ;;
+esac

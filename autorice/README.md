@@ -49,6 +49,7 @@ is `~/dotfiles/autorice/profiles`.
 
 ```bash
 autorice apply "reading papers"
+autorice "bright sunshine work"
 autorice apply development
 autorice describe "dim ui with a browser on the left and terminal plus sublime stacked on the right"
 autorice codex-plan "quiet browser and editor layout"
@@ -59,11 +60,10 @@ autorice list
 autorice waybar
 ```
 
-- `apply <text|profile>` classifies the text, loads the matching profile, and
-  applies it. If the text looks like a freeform layout request, it uses the
-  Codex planner path.
-- `describe <text>` always asks the Codex planner for a constrained plan and
-  applies it.
+- `apply <profile>` loads an exact named profile locally and applies it.
+- `apply <text>` asks the Codex planner for a constrained plan, then applies it.
+- `autorice <text>` is shorthand for `autorice apply <text>`.
+- `describe <text>` is an alias for the Codex planner path.
 - `codex-plan <text>` prints the constrained Codex JSON plan without applying it.
 - `detect` reads the active Hyprland window class/title and selected process
   hints, then applies the inferred profile.
@@ -154,11 +154,18 @@ somewhere else.
 
 ## Codex Planner
 
-`autorice describe` wraps `codex exec` for requests that are too specific for
-the keyword classifier, for example:
+`autorice apply <text>`, `autorice <text>`, and `autorice describe <text>` wrap
+`codex exec` for natural-language requests, for example:
 
 ```bash
-autorice describe "dim ui with a web browser in one half and a terminal and sublime text stacked on the other"
+autorice apply "dim ui with a web browser in one half and a terminal and sublime text stacked on the other"
+```
+
+Exact profile names still apply locally without Codex:
+
+```bash
+autorice apply reading
+autorice apply development
 ```
 
 The wrapper runs Codex with:
@@ -191,10 +198,10 @@ actual tiling behavior, so existing windows on the workspace can affect the
 final arrangement.
 
 `Ctrl+Super+Space` opens a generic terminal with
-`AUTORICE_EPHEMERAL_TERMINAL=1`. When `autorice describe "..."` is run from
-that terminal, `autorice` records the source window address and closes only that
-terminal after applying the plan. Running `autorice` from an ordinary terminal
-does not close the terminal.
+`AUTORICE_EPHEMERAL_TERMINAL=1`. When a natural-language `autorice` request is
+run from that terminal, `autorice` records the source window address and closes
+only that terminal after applying the plan. Running `autorice` from an ordinary
+terminal does not close the terminal.
 
 Freeform layouts default to the active Hyprland workspace at invocation time.
 The Codex planner sees that current workspace in its prompt, and the local
@@ -216,10 +223,11 @@ layout.
 `~/.local/state/omarchy/toggles/hypr/*.conf`, so profile layout changes can be
 applied without editing the base Hyprland config.
 
-## How Classification Works
+## How Fallback Classification Works
 
-The classifier in `personal_scripts/autorice` is intentionally simple and local.
-It lowercases the request and matches keywords:
+The classifier in `personal_scripts/autorice` is now only used by `detect` and
+as a fallback if Codex planning is unavailable. It is intentionally simple and
+local. It lowercases the request and matches keywords:
 
 - gaming keywords: `game`, `steam`, `lutris`, `heroic`, `proton`, `gamescope`,
   `fps`, `gpu`
@@ -315,11 +323,7 @@ general {
 decoration {
   rounding = 0
   active_opacity = 1.0
-  inactive_opacity = 0.96
-}
-
-misc {
-  vfr = true
+  inactive_opacity = 1.0
 }
 ```
 
@@ -353,11 +357,7 @@ general {
 decoration {
   rounding = 6
   active_opacity = 1.0
-  inactive_opacity = 0.92
-}
-
-misc {
-  vfr = true
+  inactive_opacity = 1.0
 }
 ```
 
@@ -393,10 +393,6 @@ decoration {
   active_opacity = 1.0
   inactive_opacity = 1.0
 }
-
-misc {
-  vfr = false
-}
 ```
 
 This removes gaps, borders, rounded corners, and opacity changes. It also turns
@@ -430,11 +426,7 @@ general {
 decoration {
   rounding = 5
   active_opacity = 1.0
-  inactive_opacity = 0.94
-}
-
-misc {
-  vfr = true
+  inactive_opacity = 1.0
 }
 ```
 
@@ -464,11 +456,7 @@ general {
 decoration {
   rounding = 3
   active_opacity = 1.0
-  inactive_opacity = 0.88
-}
-
-misc {
-  vfr = true
+  inactive_opacity = 1.0
 }
 ```
 
@@ -503,11 +491,7 @@ general {
 decoration {
   rounding = 4
   active_opacity = 1.0
-  inactive_opacity = 0.96
-}
-
-misc {
-  vfr = false
+  inactive_opacity = 1.0
 }
 ```
 
