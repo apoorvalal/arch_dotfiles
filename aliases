@@ -254,9 +254,9 @@ alias log-out='sudo pkill -u $USER'
 alias yi='yi --as=vim'
 
 #LS_COLORS=$LS_COLORS:'di=0;35:' ; export LS_COLORS
-alias le="exa -l --group-directories-first --colour-scale -abgh"
-alias l='exa -F --sort=extension --group-directories-first --colour-scale -abgh'
-alias ll='exa -lh -l -b --group-directories-first --colour-scale -abgh'
+alias le="exa -l --group-directories-first --color-scale -abgh"
+alias l='exa -F --sort=extension --group-directories-first --color-scale -abgh'
+alias ll='exa -lh -l -b --group-directories-first --color-scale -abgh'
 alias lll='exa -alF --group-directories-first --color=always|more'
 alias lsdot='exa -a | egrep '^\.' --color=always|more'
 alias lla='exa -alF --group-directories-first --color=always'
