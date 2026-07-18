@@ -144,8 +144,6 @@ vnoremap <Leader>s <Plug>SlimeParagraphSend
 vnoremap <Leader>w <Plug>SlimeLineSend
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""
-"let g:pymode_python='/home/alal/anaconda3/bin/python'
-
 " ----- jistr/vim-nerdtree-tabs -----
 " Open/close NERDTree Tabs with \t
 nmap <silent> <leader>t :NERDTreeTabsToggle<CR>
@@ -220,8 +218,6 @@ let g:ale_fixers = {
 \    'r': ['remove_trailing_lines', 'trim_whitespace'],
 \} 
 "let g:ale_fix_on_save = 1
-let g:python_host_prog = '/home/alal/anaconda3/bin/python'
-let g:python3_host_prog = '/home/alal/anaconda3/bin/python'
 
 
 " Keep undo history across sessions by storing it in a file
@@ -233,4 +229,3 @@ if has('persistent_undo')
     set undodir=$HOME/.vim/undo_dir
     set undofile
 endif
-

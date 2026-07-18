@@ -18,6 +18,7 @@ then create the symlinks below.
 ```bash
 ln -s ~/dotfiles/hypr ~/.config/hypr
 ln -s ~/dotfiles/ghostty ~/.config/ghostty
+ln -s ~/dotfiles/nvim ~/.config/nvim
 ln -s ~/dotfiles/omarchy ~/.config/omarchy
 ln -s ~/dotfiles/waybar ~/.config/waybar
 ln -s ~/dotfiles/swayosd ~/.config/swayosd
@@ -29,6 +30,7 @@ ln -s ~/dotfiles/bashrc ~/.bashrc
 ln -s ~/dotfiles/aliases ~/.aliases
 ln -s ~/dotfiles/pathrc ~/.pathrc
 ln -s ~/dotfiles/tmux.conf ~/.tmux.conf
+ln -s ~/dotfiles/gitconfig ~/.gitconfig
 ln -s ~/dotfiles/pythonstartup ~/.pythonstartup
 ```
 
@@ -46,12 +48,13 @@ ln -s ~/dotfiles/pythonstartup ~/.pythonstartup
 - `swayosd/`: SwayOSD config and style.
 - `btop/`: btop config and current theme link.
 - `ghostty/`: Ghostty terminal config.
+- `nvim/`: Active LazyVim configuration and plugin lockfile.
 - `personal_scripts/`: Small commands that should be available on `$PATH`,
   including `autorice`.
 - `autorice/`: Task-aware ricing prototype. See `autorice/README.md`.
 - `sublime/`: Sublime Text user preferences, keymaps, and snippets.
-- `bashrc`, `aliases`, `tmux.conf`, `vimrc`, `init.lua`, `init.vim`,
-  `zathurarc`: Shell, terminal, editor, and app configs.
+- `bashrc`, `aliases`, `gitconfig`, `tmux.conf`, `vimrc`, and `zathurarc`:
+  Shell, terminal, editor, and app configs.
 
 ## Omarchy Integration
 

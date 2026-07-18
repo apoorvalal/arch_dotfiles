@@ -125,7 +125,9 @@ fzo(){
   o $(fzf)
 }
 
-alias rtar="R CMD INSTALL"
+if command -v R &>/dev/null; then
+  alias rtar="R CMD INSTALL"
+fi
 
 # number of lines in csv
 csv_nlines(){
@@ -198,22 +200,26 @@ qW(){
   quarto render $1
 }
 
-# ipynb to scripts
-alias nbscr='for f in **/*.ipynb; do jupytext --to py:percent $f; done'
-alias nbscrr='for f in **/*.ipynb; do jupytext --to r:percent $f; done'
-alias nbweb='for f in **/*.ipynb; do jupyter nbconvert --to html $f; done'
-alias nbpdf='for f in **/*.ipynb; do jupyter nbconvert --to PDFviaHTML $f; done'
+# Notebook conversion helpers are only defined when their tools are installed.
+if command -v jupytext &>/dev/null; then
+  alias nbscr='for f in **/*.ipynb; do jupytext --to py:percent "$f"; done'
+  alias nbscrr='for f in **/*.ipynb; do jupytext --to r:percent "$f"; done'
+  alias nbscr1='jupytext --to py:percent'
+  alias rmdnb1='jupytext --to notebook'
+fi
 
-alias nbwebrun='for f in **/*.ipynb; do jupyter nbconvert --to html --execute $f; done'
-alias nbpdfrun='for f in **/*.ipynb; do jupyter nbconvert --to PDFviaHTML --execute $f; done'
+if command -v jupyter &>/dev/null; then
+  alias nbweb='for f in **/*.ipynb; do jupyter nbconvert --to html "$f"; done'
+  alias nbpdf='for f in **/*.ipynb; do jupyter nbconvert --to PDFviaHTML "$f"; done'
+  alias nbwebrun='for f in **/*.ipynb; do jupyter nbconvert --to html --execute "$f"; done'
+  alias nbpdfrun='for f in **/*.ipynb; do jupyter nbconvert --to PDFviaHTML --execute "$f"; done'
+  alias nbweb1='jupyter nbconvert --to html'
+  alias nbpdf1='jupyter nbconvert --to PDFviaHTML'
+fi
 
-
-# ipynb to scripts
-alias nbscr1='jupytext --to py:percent $1'
-alias rmdnb1='jupytext --to notebook $1'
-alias nbweb1='jupyter nbconvert --to html $1'
-alias nbpdf1='jupyter-nbconvert --to PDFviaHTML $1'
-alias sweave="R CMD Sweave --pdf $1"
+if command -v R &>/dev/null; then
+  alias sweave="R CMD Sweave --pdf"
+fi
 
 ################################
 
@@ -239,15 +245,19 @@ alias mkdir='mkdir -p'
 alias chown='chown -Rv'
 alias chmod='chmod -Rv'
 alias grep='grep --color=always -i -n'
-alias diff='colordiff'
+if command -v colordiff &>/dev/null; then
+  alias diff='colordiff'
+fi
 alias tar2='tar -xzvf'
 alias rsync='rsync --verbose  --progress --stats --compress --recursive --times --perms --links exclude "*bak" --exclude "*~*"'
 alias psaux='ps aux'
 alias psl='psaux|more'
 alias psg='psaux|grep'
 alias more='less'
-alias tracert='mtr'
-alias traceroute='mtr'
+if command -v mtr &>/dev/null; then
+  alias tracert='mtr'
+  alias traceroute='mtr'
+fi
 alias logout='sudo pkill -u $USER'
 alias log-out='sudo pkill -u $USER'
 

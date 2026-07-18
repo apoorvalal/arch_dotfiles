@@ -1,36 +1,21 @@
 [alias]
-	st = status -s
-   	ci = commit
-   	co = checkout
-   	br = branch
-	recent = log -n 10 --oneline --graph
-	g = grep --break --heading --line-number
-[color]
-	ui = true
-   	status = auto
-   	branch = auto
-   	diff = never
+	co = checkout
+	br = branch
+	ci = commit
+	st = status
+[pull]
+	rebase = true
+[init]
+	defaultBranch = master
 [user]
-	email = lal.apoorva@gmail.com
 	name = Apoorva Lal
+	email = lal.apoorva@gmail.com
 [core]
-	editor = vim
 	excludesfile = ~/dotfiles/gitignore
-	ignorecase = true
-[push]
-	default = simple
-	autoSetupRemote = true
 [filter "lfs"]
-	required = true
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
-[grep]
-	extendRegexp = true
-	lineNumber = true
-[http]
-	cookiefile = /home/alal/.gitcookies
-[credential]
-	helper = cache --timeout=3600
-[init]
-	defaultBranch = master
+	required = true
+[push]
+	autoSetupRemote = true
