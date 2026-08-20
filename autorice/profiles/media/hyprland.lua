@@ -1,0 +1,14 @@
+-- Managed by the autorice media profile.
+hl.config({
+  general = {
+    gaps_in = 3,
+    gaps_out = 5,
+    border_size = 1,
+  },
+
+  decoration = {
+    rounding = 5,
+    active_opacity = 1.0,
+    inactive_opacity = 1.0,
+  },
+})

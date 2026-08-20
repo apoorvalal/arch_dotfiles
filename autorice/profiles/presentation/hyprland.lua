@@ -1,0 +1,14 @@
+-- Managed by the autorice presentation profile.
+hl.config({
+  general = {
+    gaps_in = 4,
+    gaps_out = 6,
+    border_size = 2,
+  },
+
+  decoration = {
+    rounding = 4,
+    active_opacity = 1.0,
+    inactive_opacity = 1.0,
+  },
+})

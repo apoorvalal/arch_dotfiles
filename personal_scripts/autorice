@@ -6,12 +6,13 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 PROFILE_DIR="$DOTFILES_DIR/autorice/profiles"
 STATE_DIR="$HOME/.local/state/autorice"
 HYPR_TOGGLE_DIR="$HOME/.local/state/omarchy/toggles/hypr"
+HYPR_TOGGLE_FILE="$HYPR_TOGGLE_DIR/autorice.lua"
 STATE_FILE="$STATE_DIR/current"
 CODEX_PLAN_SCHEMA="$DOTFILES_DIR/autorice/codex-plan.schema.json"
 CODEX_PLAN_FILE="$STATE_DIR/codex-plan.json"
 CODEX_LOG_FILE="$STATE_DIR/codex-plan.log"
 
-export OMARCHY_PATH="${OMARCHY_PATH:-$HOME/.local/share/omarchy}"
+export OMARCHY_PATH="${OMARCHY_PATH:-/usr/share/omarchy}"
 export PATH="$DOTFILES_DIR/personal_scripts:$OMARCHY_PATH/bin:$PATH"
 
 usage() {
@@ -25,7 +26,7 @@ Usage:
   autorice status
   autorice check
   autorice list
-  autorice waybar
+  autorice bar
 
 Examples:
   autorice "bright sunshine work"
@@ -37,7 +38,9 @@ USAGE
 }
 
 notify() {
-  if command -v notify-send >/dev/null 2>&1; then
+  if command -v omarchy-notification-send >/dev/null 2>&1; then
+    omarchy-notification-send -u low "autorice" "$1"
+  elif command -v notify-send >/dev/null 2>&1; then
     notify-send -u low "autorice" "$1"
   fi
 }
@@ -46,11 +49,24 @@ warn() {
   printf 'autorice: %s\n' "$*" >&2
 }
 
-signal_waybar() {
-  local signal="$1"
+reload_hyprland() {
+  local errors
 
-  command -v pkill >/dev/null 2>&1 || return 0
-  pkill -RTMIN+"$signal" waybar 2>/dev/null || true
+  if ! command -v hyprctl >/dev/null 2>&1; then
+    warn "wrote Hyprland override but skipped reload because hyprctl is not installed"
+    return 0
+  fi
+
+  if ! hyprctl reload >/dev/null 2>&1; then
+    warn "failed to reload Hyprland"
+    return 0
+  fi
+
+  errors="$(hyprctl configerrors 2>/dev/null || true)"
+  if [[ -n $errors ]]; then
+    warn "Hyprland reported config errors after reload:"
+    printf '%s\n' "$errors" >&2
+  fi
 }
 
 ephemeral_terminal_address() {
@@ -316,19 +332,21 @@ codex_plan() {
 write_plan_hyprland() {
   local plan_file="$1"
 
-  cat >"$HYPR_TOGGLE_DIR/autorice.conf" <<EOF
-# Managed by autorice Codex planner.
-general {
-  gaps_in = $(jq -r '.hyprland.gaps_in' "$plan_file")
-  gaps_out = $(jq -r '.hyprland.gaps_out' "$plan_file")
-  border_size = $(jq -r '.hyprland.border_size' "$plan_file")
-}
+  cat >"$HYPR_TOGGLE_FILE" <<EOF
+-- Managed by autorice Codex planner.
+hl.config({
+  general = {
+    gaps_in = $(jq -r '.hyprland.gaps_in' "$plan_file"),
+    gaps_out = $(jq -r '.hyprland.gaps_out' "$plan_file"),
+    border_size = $(jq -r '.hyprland.border_size' "$plan_file"),
+  },
 
-decoration {
-  rounding = $(jq -r '.hyprland.rounding' "$plan_file")
-  active_opacity = $(jq -r '.hyprland.active_opacity' "$plan_file")
-  inactive_opacity = 1
-}
+  decoration = {
+    rounding = $(jq -r '.hyprland.rounding' "$plan_file"),
+    active_opacity = $(jq -r '.hyprland.active_opacity' "$plan_file"),
+    inactive_opacity = 1,
+  },
+})
 EOF
 }
 
@@ -417,9 +435,7 @@ apply_codex_plan() {
   fi
 
   write_plan_hyprland "$CODEX_PLAN_FILE"
-  if command -v hyprctl >/dev/null 2>&1; then
-    hyprctl reload >/dev/null 2>&1 || warn "failed to reload Hyprland"
-  fi
+  reload_hyprland
 
   set_power_profile "$power"
   set_idle "$idle"
@@ -436,7 +452,6 @@ apply_codex_plan() {
     date '+APPLIED_AT=%Y-%m-%dT%H:%M:%S%z'
   } >"$STATE_FILE"
 
-  signal_waybar 11
   notify "$profile: $description"
   echo "Applied Codex plan: $description ($theme)"
   close_ephemeral_terminal "$terminal_address"
@@ -461,23 +476,20 @@ current_task_text() {
 
 set_dnd() {
   local desired="$1"
+  local state
 
   [[ $desired == "keep" ]] && return 0
 
-  if ! command -v makoctl >/dev/null 2>&1; then
-    warn "skipping DND=$desired because makoctl is not installed"
+  if ! command -v omarchy-shell >/dev/null 2>&1; then
+    warn "skipping DND=$desired because omarchy-shell is not installed"
     return 0
   fi
 
-  if [[ $desired == "on" ]]; then
-    makoctl mode | grep -q '^do-not-disturb$' || makoctl mode -a do-not-disturb >/dev/null || warn "failed to enable do-not-disturb"
-  elif [[ $desired == "off" ]]; then
-    if makoctl mode | grep -q '^do-not-disturb$'; then
-      makoctl mode -r do-not-disturb >/dev/null || warn "failed to disable do-not-disturb"
-    fi
+  if ! state="$(omarchy-shell notifications setDnd "$desired" 2>/dev/null)"; then
+    warn "failed to set do-not-disturb to $desired"
+  elif [[ $state != "$desired" ]]; then
+    warn "notification service returned unexpected DND state: ${state:-empty}"
   fi
-
-  signal_waybar 10
 }
 
 set_idle() {
@@ -485,28 +497,16 @@ set_idle() {
 
   [[ $desired == "keep" ]] && return 0
 
-  if ! command -v hypridle >/dev/null 2>&1; then
-    warn "skipping IDLE=$desired because hypridle is not installed"
+  if ! command -v omarchy-toggle-idle >/dev/null 2>&1; then
+    warn "skipping IDLE=$desired because omarchy-toggle-idle is not installed"
     return 0
   fi
 
   if [[ $desired == "on" ]]; then
-    if ! command -v pgrep >/dev/null 2>&1 || ! pgrep -x hypridle >/dev/null; then
-      if command -v uwsm-app >/dev/null 2>&1; then
-        uwsm-app -- hypridle >/dev/null 2>&1 &
-      else
-        hypridle >/dev/null 2>&1 &
-      fi
-    fi
+    omarchy-toggle-idle allow-idle >/dev/null || warn "failed to allow idle"
   elif [[ $desired == "off" ]]; then
-    if command -v pkill >/dev/null 2>&1; then
-      pkill -x hypridle 2>/dev/null || true
-    else
-      warn "skipping hypridle stop because pkill is not installed"
-    fi
+    omarchy-toggle-idle stay-awake >/dev/null || warn "failed to prevent idle"
   fi
-
-  signal_waybar 9
 }
 
 set_power_profile() {
@@ -561,13 +561,9 @@ apply_profile() {
     fi
   fi
 
-  if [[ -f $PROFILE_DIR/$profile/hyprland.conf ]]; then
-    cp "$PROFILE_DIR/$profile/hyprland.conf" "$HYPR_TOGGLE_DIR/autorice.conf"
-    if command -v hyprctl >/dev/null 2>&1; then
-      hyprctl reload >/dev/null 2>&1 || warn "failed to reload Hyprland"
-    else
-      warn "wrote Hyprland override but skipped reload because hyprctl is not installed"
-    fi
+  if [[ -f $PROFILE_DIR/$profile/hyprland.lua ]]; then
+    cp "$PROFILE_DIR/$profile/hyprland.lua" "$HYPR_TOGGLE_FILE"
+    reload_hyprland
   fi
 
   set_power_profile "$power"
@@ -583,7 +579,6 @@ apply_profile() {
     date '+APPLIED_AT=%Y-%m-%dT%H:%M:%S%z'
   } >"$STATE_FILE"
 
-  signal_waybar 11
   notify "$profile: $description"
   echo "Applied $profile ($theme)"
 }
@@ -595,7 +590,7 @@ check_dependencies() {
 
   echo "Dependencies:"
 
-  for command in bash find sed paste date cp grep awk mktemp cat; do
+  for command in bash find sed paste date cp grep awk mktemp cat luac; do
     if command -v "$command" >/dev/null 2>&1; then
       printf '  ok       %s\n' "$command"
     else
@@ -604,7 +599,7 @@ check_dependencies() {
     fi
   done
 
-  for command in omarchy-theme-set hyprctl hypridle uwsm-app makoctl powerprofilesctl notify-send waybar pgrep pkill jq codex gjs playerctl autorice-widget; do
+  for command in omarchy-theme-set omarchy-shell omarchy-toggle-idle hyprctl powerprofilesctl omarchy-notification-send notify-send pgrep pkill jq codex gjs autorice-widget; do
     if command -v "$command" >/dev/null 2>&1; then
       printf '  ok       %s\n' "$command"
     else
@@ -631,7 +626,7 @@ validate_profiles() {
 
   while read -r profile; do
     profile_file="$PROFILE_DIR/$profile/profile.conf"
-    hypr_file="$PROFILE_DIR/$profile/hyprland.conf"
+    hypr_file="$PROFILE_DIR/$profile/hyprland.lua"
     unset THEME POWER_PROFILE IDLE DND WIDGETS DESCRIPTION
 
     printf '  %s\n' "$profile"
@@ -703,11 +698,14 @@ validate_profiles() {
     fi
 
     if [[ -f $hypr_file ]]; then
-      if grep -Eq '^[[:space:]]*vfr[[:space:]]*=' "$hypr_file"; then
-        printf '    invalid hyprland override: misc:vfr was removed in Hyprland 0.55\n'
+      if ! command -v luac >/dev/null 2>&1; then
+        printf '    cannot validate hyprland override: luac is missing\n'
+        failed=1
+      elif ! luac -p "$hypr_file"; then
+        printf '    invalid hyprland Lua override\n'
         failed=1
       else
-        printf '    hyprland override ok\n'
+        printf '    hyprland Lua override ok\n'
       fi
     else
       printf '    hyprland override absent; profile will only change system state\n'
@@ -745,17 +743,17 @@ status() {
   fi
 }
 
-waybar() {
+bar() {
   local profile="auto" label theme tooltip class
 
   if [[ -f $STATE_FILE ]]; then
     # shellcheck source=/dev/null
     source "$STATE_FILE"
     profile="${PROFILE:-auto}"
-    theme="${THEME:-$(cat "$HOME/.config/omarchy/current/theme.name" 2>/dev/null || echo unknown)}"
+    theme="${THEME:-$(cat "$HOME/.local/state/omarchy/current/theme.name" 2>/dev/null || echo unknown)}"
     tooltip="${DESCRIPTION:-autorice profile}: ${REQUEST:-manual}"
   else
-    theme="$(cat "$HOME/.config/omarchy/current/theme.name" 2>/dev/null || echo unknown)"
+    theme="$(cat "$HOME/.local/state/omarchy/current/theme.name" 2>/dev/null || echo unknown)"
     tooltip="autorice has not applied a profile yet"
   fi
 
@@ -807,8 +805,8 @@ main() {
     list)
       list_profiles
       ;;
-    waybar)
-      waybar
+    bar|waybar)
+      bar
       ;;
     ""|-h|--help|help)
       usage

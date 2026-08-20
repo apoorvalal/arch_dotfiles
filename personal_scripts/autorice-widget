@@ -24,6 +24,7 @@ write_gjs() {
 imports.gi.versions.Gtk = "4.0";
 imports.gi.versions.Gtk4LayerShell = "1.0";
 const GLib = imports.gi.GLib;
+const Gio = imports.gi.Gio;
 const Gtk = imports.gi.Gtk;
 const Gtk4LayerShell = imports.gi.Gtk4LayerShell;
 
@@ -59,12 +60,86 @@ function cpuTemp() {
   return raw || "n/a";
 }
 
-function mediaLine(format) {
-  return run(`playerctl metadata --format '${format}' 2>/dev/null`);
+function unpack(value) {
+  let result = value;
+  while (result && typeof result.deep_unpack === "function") {
+    result = result.deep_unpack();
+  }
+  return result;
 }
 
-function mediaStatus() {
-  return run("playerctl status 2>/dev/null") || "No player";
+function dbusCall(name, path, iface, method, parameters, replyType) {
+  return Gio.DBus.session.call_sync(
+    name,
+    path,
+    iface,
+    method,
+    parameters,
+    replyType ? new GLib.VariantType(replyType) : null,
+    Gio.DBusCallFlags.NONE,
+    1000,
+    null
+  );
+}
+
+function mprisProperties(name, iface) {
+  const reply = dbusCall(
+    name,
+    "/org/mpris/MediaPlayer2",
+    "org.freedesktop.DBus.Properties",
+    "GetAll",
+    new GLib.Variant("(s)", [iface]),
+    "(a{sv})"
+  );
+  return unpack(reply)[0] || {};
+}
+
+function mediaSnapshot() {
+  const empty = {
+    status: "No player",
+    title: "Nothing playing",
+    artist: "No artist",
+    player: "MPRIS"
+  };
+
+  try {
+    const reply = dbusCall(
+      "org.freedesktop.DBus",
+      "/org/freedesktop/DBus",
+      "org.freedesktop.DBus",
+      "ListNames",
+      null,
+      "(as)"
+    );
+    const names = unpack(reply)[0].filter(name =>
+      name.startsWith("org.mpris.MediaPlayer2."));
+    if (names.length === 0) return empty;
+
+    let fallback = null;
+    for (const name of names) {
+      try {
+        const props = mprisProperties(name, "org.mpris.MediaPlayer2.Player");
+        const metadata = unpack(props.Metadata) || {};
+        const artists = unpack(metadata["xesam:artist"]);
+        const snapshot = {
+          status: String(unpack(props.PlaybackStatus) || "Stopped"),
+          title: String(unpack(metadata["xesam:title"]) || "Nothing playing"),
+          artist: Array.isArray(artists) && artists.length > 0
+            ? artists.join(", ")
+            : "No artist",
+          player: name.slice("org.mpris.MediaPlayer2.".length)
+        };
+
+        if (snapshot.status === "Playing") return snapshot;
+        if (!fallback) fallback = snapshot;
+      } catch (error) {
+        // A player may disappear between ListNames and GetAll.
+      }
+    }
+    return fallback || empty;
+  } catch (error) {
+    return empty;
+  }
 }
 
 function configureLayerWindow(win) {
@@ -138,13 +213,11 @@ function buildWindow(app) {
       lines[2].set_label(`Disk: ${diskLine()}`);
       lines[3].set_label(`Temp: ${cpuTemp()}`);
     } else {
-      const status = mediaStatus();
-      const track = mediaLine("{{title}}") || "Nothing playing";
-      const artist = mediaLine("{{artist}}");
-      title.set_label(status === "Playing" ? "Now Playing" : status);
-      lines[0].set_label(track);
-      lines[1].set_label(artist || "No artist");
-      lines[2].set_label(mediaLine("{{playerName}}") || "playerctl");
+      const media = mediaSnapshot();
+      title.set_label(media.status === "Playing" ? "Now Playing" : media.status);
+      lines[0].set_label(media.title);
+      lines[1].set_label(media.artist);
+      lines[2].set_label(media.player);
     }
     return GLib.SOURCE_CONTINUE;
   }
